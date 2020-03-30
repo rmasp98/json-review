@@ -3,6 +3,7 @@ package jsontree_test
 import (
 	"encoding/json"
 	"kube-review/jsontree"
+	"regexp"
 	"testing"
 )
 
@@ -141,6 +142,36 @@ func TestGetNodeForArrayRemovesBrackets(t *testing.T) {
 	}
 }
 
+func TestSearchReturnsFalseIfNotMatch(t *testing.T) {
+	json := GetJSONData(`{"Goodbye":"World"}`)
+	nodes, _ := jsontree.CreateTreeNodes(json, 0)
+	r := regexp.MustCompile("test")
+	actual := nodes[0].Search(r)
+	if actual != false {
+		t.Errorf("Expecting 'false' but got '%t'", actual)
+	}
+}
+
+func TestSearchReturnsTrueIfMatchInKey(t *testing.T) {
+	json := GetJSONData(`{"Goodbye":"World"}`)
+	nodes, _ := jsontree.CreateTreeNodes(json, 0)
+	r := regexp.MustCompile("Goodbye")
+	actual := nodes[0].Search(r)
+	if actual != true {
+		t.Errorf("Expecting 'true' but got '%t'", actual)
+	}
+}
+
+func TestSearchReturnsTrueIfMatchInValue(t *testing.T) {
+	json := GetJSONData(`{"Goodbye":"World"}`)
+	nodes, _ := jsontree.CreateTreeNodes(json, 0)
+	r := regexp.MustCompile("World")
+	actual := nodes[0].Search(r)
+	if actual != true {
+		t.Errorf("Expecting 'true' but got '%t'", actual)
+	}
+}
+
 // HELPER FUNCTIONS AND DATA //////////////////////////////////////////////
 
 func GetJSONData(jsonData string) interface{} {
@@ -148,42 +179,3 @@ func GetJSONData(jsonData string) interface{} {
 	json.Unmarshal([]byte(jsonData), &data)
 	return data
 }
-
-const (
-	unorderedMapJSON  = `{"Hello":"World","Goodbye":"Cruel World"}`
-	orderedMapJSON    = `{"Goodbye":"Cruel World","Hello":"World"}`
-	multiLevelMapJSON = `{"Goodbye":{"Cruel World":"Test","Hello":"World"}}`
-	//TODO: get better complex JSON example?
-	complexJsonDoc = `{
-		"definitions": {},
-		"$schema": "http://json-schema.org/draft-07/schema#",
-		"$id": "http://example.com/root.json",
-		"type": "object",
-		"title": "The Root Schema",
-		"required": [
-		  "name",
-		  "age"
-		],
-		"properties": {
-		  "name": {
-			"$id": "#/properties/name",
-			"type": "string",
-			"title": "The Name Schema",
-			"default": "",
-			"examples": [
-			  "Ashley"
-			],
-			"pattern": "^(.*)$"
-		  },
-		  "age": {
-			"$id": "#/properties/age",
-			"type": "integer",
-			"title": "The Age Schema",
-			"default": 0,
-			"examples": [
-			  25
-			]
-		  }
-		}
-	  }`
-)

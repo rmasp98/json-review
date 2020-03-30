@@ -2,19 +2,24 @@ package jsontree
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 )
 
+// TreeNode is a JSON node
 type TreeNode struct {
-	key       string
-	value     string
-	Prefix    string
-	Level     int
-	IsVisible bool
+	key        string
+	value      string
+	Prefix     string
+	Level      int
+	Parent     int
+	IsExpanded bool
+	IsMatched  bool
 }
 
+// GetJSON returns a snippet of json that will be used by NodeList to reconstruct the original JSON
 func (t TreeNode) GetJSON(level int) string {
 	if t.key == "" || t.key[0:2] == "[]" || level == 0 {
 		return strings.Repeat(spacing, level) + t.value
@@ -22,20 +27,28 @@ func (t TreeNode) GetJSON(level int) string {
 	return strings.Repeat(spacing, level) + strconv.Quote(t.key) + ": " + t.value
 }
 
+// GetNode returns the key of node in nice format
 func (t TreeNode) GetNode() string {
 	return t.Prefix + strings.TrimLeft(t.key, "[]")
 }
 
+// Search checks key and value of node agaisnt regex
+func (t *TreeNode) Search(r *regexp.Regexp) bool {
+	t.IsMatched = r.MatchString(t.key) || r.MatchString(t.value)
+	return t.IsMatched
+}
+
+// CreateTreeNodes creates an array of TreeNodes that represents incoming JSON data
 func CreateTreeNodes(data interface{}, level int) ([]TreeNode, error) {
 	switch elem := data.(type) {
 	case string:
-		return []TreeNode{TreeNode{"", strconv.Quote(elem), "", level, true}}, nil
+		return []TreeNode{TreeNode{"", strconv.Quote(elem), "", level, 0, true, true}}, nil
 	case float64:
-		return []TreeNode{TreeNode{"", strconv.FormatFloat(elem, 'g', -1, 64), "", level, true}}, nil
+		return []TreeNode{TreeNode{"", strconv.FormatFloat(elem, 'g', -1, 64), "", level, 0, true, true}}, nil
 	case bool:
-		return []TreeNode{TreeNode{"", strconv.FormatBool(elem), "", level, true}}, nil
+		return []TreeNode{TreeNode{"", strconv.FormatBool(elem), "", level, 0, true, true}}, nil
 	case nil:
-		return []TreeNode{TreeNode{"", "null", "", level, true}}, nil
+		return []TreeNode{TreeNode{"", "null", "", level, 0, true, true}}, nil
 	case map[string]interface{}:
 		return newMapNode(elem, level)
 	case []interface{}:
@@ -76,7 +89,7 @@ func processNode(key string, childInterface interface{}, level int) ([]TreeNode,
 	}
 
 	value := getNodeValue(childNodes)
-	nodes = append(nodes, TreeNode{key, value, "", level, true})
+	nodes = append(nodes, TreeNode{key, value, "", level, 0, true, true})
 	if value == "{" || value == "[" {
 		nodes = append(nodes, childNodes...)
 	}

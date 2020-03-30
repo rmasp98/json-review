@@ -62,7 +62,10 @@ func NewCursesUI(json *jsontree.NodeList) CursesUI {
 	cui := CursesUI{gui}
 
 	gui.SetManagerFunc(func(gui *gocui.Gui) error {
-		GetWindow().Resize(gui.Size())
+		x, y := gui.Size()
+		GetWindow().Resize(x, y)
+		GetWindow().UpdateViewContent(DISPLAY, json.GetJSON(y))
+		GetWindow().UpdateViewContent(PANEL, json.GetNodes(y))
 		return GetWindow().SetViews(gui)
 	})
 
@@ -71,7 +74,7 @@ func NewCursesUI(json *jsontree.NodeList) CursesUI {
 	GetWindow().UpdateViewContent(PANEL, json.GetNodes(y))
 	GetWindow().UpdateEditor(PANEL, NewNodesEditor(json))
 	GetWindow().UpdateEditor(SEARCH, NewSearchEditor(json))
-	GetWindow().UpdateEditor(DISPLAY, gocui.EditorFunc(displayEditor))
+	GetWindow().UpdateEditor(DISPLAY, NewDisplayEditor(json))
 	GetWindow().UpdateEditor(SAVE, gocui.EditorFunc(saveEditor))
 
 	if err := gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, Quit); err != nil {

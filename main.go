@@ -17,18 +17,20 @@ func main() {
 
 	if len(os.Args) > 1 {
 		var jsonData jsontree.NodeList
-		var errJSON error
 		{
 			rawJSON, errRead := ioutil.ReadFile(os.Args[1])
 			if errRead != nil {
 				fmt.Printf("%s does not exist\n", os.Args[1])
 				os.Exit(1)
 			}
+
 			// jsonData, errJSON = jsontree.CreateTree(string(rawJSON))
 			// if errRead != nil || errJSON != nil {
 			// 	fmt.Printf("%s does not contain correct JSON\n", os.Args[1])
 			// 	os.Exit(1)
 			// }
+
+			var errJSON error
 			jsonData, errJSON = jsontree.NewNodeList(string(rawJSON))
 			if errRead != nil || errJSON != nil {
 				fmt.Printf("%s does not contain correct JSON\n", os.Args[1])

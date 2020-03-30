@@ -139,9 +139,9 @@ func TestEnsureActiveNodeIsRelativeToTopNode(t *testing.T) {
 	nodeList.MoveTopNode(2)
 	nodeList.SetActiveNode(2)
 	actual := nodeList.GetJSON(1)
-	if actual != `"ISO 8879:1986"` {
-		t.Errorf("Expected out:\n'%s'\n\nActual output:\n%s",
-			`"ISO 8879:1986"`, actual,
+	if actual != `"ISO 8879:1986",` {
+		t.Errorf("Expected out:\n'%s'\nActual output:\n'%s'",
+			`"ISO 8879:1986",`, actual,
 		)
 	}
 }
@@ -205,6 +205,64 @@ func TestCollapseActiveNodeMovesTopNodeIfRequired(t *testing.T) {
 	actual := nodeList.GetNodes(1)
 	if actual != "Root" {
 		t.Errorf("Expected 'Root' nodes but got '%s'", actual)
+	}
+}
+
+func TestSearchWithNoMatchesReturnsSizeOne(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	nodeList.Search("I will not match")
+	actual := nodeList.Size()
+	if actual != 1 {
+		t.Errorf("Expected '1' nodes but got '%d'", actual)
+	}
+}
+
+func TestSearchShowsNodeWithMatchInNode(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	nodeList.Search("[a-zA-Z]{5}")
+	nodeList.MoveTopNode(1)
+	actual := nodeList.GetNodes(1)
+	if actual != "├──GlossDiv" {
+		t.Errorf("Expected '├──GlossDiv' nodes but got '%s'", actual)
+	}
+}
+
+func TestSearchShowsNodeWithMatchInDirectChildren(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	nodeList.Search("title")
+	nodeList.MoveTopNode(1)
+	actual := nodeList.GetNodes(1)
+	if actual != "├──GlossDiv" {
+		t.Errorf("Expected '├──GlossDiv' nodes but got '%s'", actual)
+	}
+}
+
+func TestSearchShowsNodeWithMatchInAnyChildren(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	nodeList.Search("XML")
+	nodeList.MoveTopNode(1)
+	actual := nodeList.GetNodes(1)
+	if actual != "└──GlossDiv" {
+		t.Errorf("Expected '└──GlossDiv' nodes but got '%s'", actual)
+	}
+}
+
+func TestSearchShowEmptyJSONWithNoMatches(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	nodeList.Search("I will not match")
+	actual := nodeList.GetJSON(23)
+	if actual != "{\n}" {
+		t.Errorf("Expected '{\n}' nodes but got '%s'", actual)
+	}
+}
+
+func TestGetJsonCanReturnOffsetJson(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	nodeList.MoveJSONPosition(5)
+	actual := nodeList.GetJSON(1)
+	expected := "            \"Acronym\": \"SGML\","
+	if actual != expected {
+		t.Errorf("Expected '%s' nodes but got '%s'", expected, actual)
 	}
 }
 

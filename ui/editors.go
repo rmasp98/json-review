@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"kube-review/jsontree"
 	"os"
 	"time"
@@ -39,26 +38,21 @@ func (e *NodesEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modi
 		}
 		e.nodeList.SetActiveNode(newY)
 	case key == gocui.KeyArrowRight:
-		e.nodeList.ExpandActiveNode()
+		x, y := v.Origin()
+		v.SetOrigin(x+1, y)
 	case key == gocui.KeyArrowLeft:
+		x, y := v.Origin()
+		v.SetOrigin(x-1, y)
+	case ch == 'e':
+		e.nodeList.ExpandActiveNode()
+	case ch == 'c':
 		newY := e.nodeList.CollapseActiveNode()
 		v.SetCursor(0, newY)
-	// case ch == 'e':
-	// 	e.nodeList.ExpandAllNodes()
-	// case ch == 'c':
-	// 	e.nodeList.CollapseAllNodes()
-	// 	v.SetCursor(0, 0)
 	case key == gocui.KeyPgup:
 		e.nodeList.MoveTopNode(-25)
 	case key == gocui.KeyPgdn:
 		e.nodeList.MoveTopNode(25)
 	}
-
-	// This prevents scrolling as we will be handling that
-	// v.SetOrigin(0, 0)
-
-	GetWindow().UpdateViewContent(PANEL, e.nodeList.GetNodes(GetWindow().Height(PANEL)))
-	GetWindow().UpdateViewContent(DISPLAY, e.nodeList.GetJSON(GetWindow().Height(DISPLAY)))
 }
 
 func getCurrentIndex(v *gocui.View) int {
@@ -92,64 +86,78 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 		v.MoveCursor(-1, 0, false)
 	case key == gocui.KeyArrowRight:
 		v.MoveCursor(1, 0, false)
+	case key == gocui.KeyEnter:
+		line, _ := v.Line(0)
+		e.nodeList.Search(line)
+		GetWindow().UpdateViewContent(PANEL, e.nodeList.GetNodes(GetWindow().Height(PANEL)))
+		// GetWindow().UpdateViewContent(DISPLAY, e.nodeList.GetJSON(0))
 	}
-	// line, _ := v.Line(0)
-	// e.nodeList.Search(line)
-	GetWindow().UpdateViewContent(PANEL, e.nodeList.GetNodes(GetWindow().Height(PANEL)))
-	// GetWindow().UpdateViewContent(DISPLAY, e.nodeList.GetJSON(0))
+
+}
+
+// DisplayEditor stuff
+type DisplayEditor struct {
+	nodeList *jsontree.NodeList
+}
+
+// NewDisplayEditor stuff
+func NewDisplayEditor(nodeList *jsontree.NodeList) *DisplayEditor {
+	return &DisplayEditor{nodeList}
 }
 
 // Edit defines response to input for display view
-func displayEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
+func (e *DisplayEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	switch {
 	case key == gocui.KeyArrowUp:
-		x, y := v.Origin()
-		v.SetOrigin(x, y-1)
+		e.nodeList.MoveJSONPosition(-1)
+	// 	x, y := v.Origin()
+	// 	v.SetOrigin(x, y-1)
 	case key == gocui.KeyArrowDown:
-		x, y := v.Origin()
-		v.SetOrigin(x, y+1)
-	case key == gocui.KeyArrowLeft:
-		x, y := v.Origin()
-		v.SetOrigin(x-1, y)
-	case key == gocui.KeyArrowRight:
-		x, y := v.Origin()
-		v.SetOrigin(x+1, y)
-	case key == gocui.KeyPgup:
-		x, y := v.Origin()
-		if y-25 > 0 {
-			v.SetOrigin(x, y-25)
-		} else {
-			v.SetOrigin(x, 0)
-		}
-	case key == gocui.KeyPgdn:
-		x, y := v.Origin()
-		v.SetOrigin(x, y+25)
+		e.nodeList.MoveJSONPosition(1)
+		// 	x, y := v.Origin()
+		// 	v.SetOrigin(x, y+1)
+		// case key == gocui.KeyArrowLeft:
+		// 	x, y := v.Origin()
+		// 	v.SetOrigin(x-1, y)
+		// case key == gocui.KeyArrowRight:
+		// 	x, y := v.Origin()
+		// 	v.SetOrigin(x+1, y)
+		// case key == gocui.KeyPgup:
+		// 	x, y := v.Origin()
+		// 	if y-25 > 0 {
+		// 		v.SetOrigin(x, y-25)
+		// 	} else {
+		// 		v.SetOrigin(x, 0)
+		// 	}
+		// case key == gocui.KeyPgdn:
+		// 	x, y := v.Origin()
+		// 	v.SetOrigin(x, y+25)
 	}
 }
 
 func saveEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
-	switch {
-	case ch != 0 && mod == 0:
-		v.EditWrite(ch)
-	case key == gocui.KeySpace:
-		v.EditWrite(' ')
-	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
-		v.EditDelete(true)
-	case key == gocui.KeyArrowLeft:
-		v.MoveCursor(-1, 0, false)
-	case key == gocui.KeyArrowRight:
-		v.MoveCursor(1, 0, false)
-	case key == gocui.KeyEnter:
-		filename, _ := v.Line(0)
-		err := save(filename)
-		v.Clear()
-		if err != nil {
-			fmt.Fprintf(v, "Failed to write to \"%s\"", filename)
-		} else {
-			fmt.Fprintf(v, "Sucessfully saved to \"%s\"", filename)
-		}
-		go closeSave(v)
-	}
+	// switch {
+	// case ch != 0 && mod == 0:
+	// 	v.EditWrite(ch)
+	// case key == gocui.KeySpace:
+	// 	v.EditWrite(' ')
+	// case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
+	// 	v.EditDelete(true)
+	// case key == gocui.KeyArrowLeft:
+	// 	v.MoveCursor(-1, 0, false)
+	// case key == gocui.KeyArrowRight:
+	// 	v.MoveCursor(1, 0, false)
+	// case key == gocui.KeyEnter:
+	// 	filename, _ := v.Line(0)
+	// 	err := save(filename)
+	// 	v.Clear()
+	// 	if err != nil {
+	// 		fmt.Fprintf(v, "Failed to write to \"%s\"", filename)
+	// 	} else {
+	// 		fmt.Fprintf(v, "Sucessfully saved to \"%s\"", filename)
+	// 	}
+	// 	go closeSave(v)
+	// }
 }
 
 func save(filename string) error {
