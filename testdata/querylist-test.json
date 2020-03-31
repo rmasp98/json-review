@@ -1,0 +1,10 @@
+{
+    "test1": {
+        "regex": "[a-z]{5}",
+        "description": "First test"
+    },
+    "test2": {
+        "regex":"[0-9]{2}",
+        "description": "Second test"
+    }
+}

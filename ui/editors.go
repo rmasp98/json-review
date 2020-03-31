@@ -61,40 +61,6 @@ func getCurrentIndex(v *gocui.View) int {
 	return yCursor + yOrigin
 }
 
-// SearchEditor is the editor for the search view
-type SearchEditor struct {
-	nodeList *jsontree.NodeList
-}
-
-// NewSearchEditor stuff
-func NewSearchEditor(nodeList *jsontree.NodeList) *SearchEditor {
-	return &SearchEditor{nodeList}
-}
-
-// TODO: increase functionality of the search editing
-
-// Edit stuff
-func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
-	switch {
-	case ch != 0 && mod == 0:
-		v.EditWrite(ch)
-	case key == gocui.KeySpace:
-		v.EditWrite(' ')
-	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
-		v.EditDelete(true)
-	case key == gocui.KeyArrowLeft:
-		v.MoveCursor(-1, 0, false)
-	case key == gocui.KeyArrowRight:
-		v.MoveCursor(1, 0, false)
-	case key == gocui.KeyEnter:
-		line, _ := v.Line(0)
-		e.nodeList.Search(line)
-		GetWindow().UpdateViewContent(PANEL, e.nodeList.GetNodes(GetWindow().Height(PANEL)))
-		// GetWindow().UpdateViewContent(DISPLAY, e.nodeList.GetJSON(0))
-	}
-
-}
-
 // DisplayEditor stuff
 type DisplayEditor struct {
 	nodeList *jsontree.NodeList

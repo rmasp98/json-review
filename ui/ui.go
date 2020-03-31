@@ -77,7 +77,7 @@ func NewCursesUI(json *jsontree.NodeList) CursesUI {
 	GetWindow().UpdateEditor(DISPLAY, NewDisplayEditor(json))
 	GetWindow().UpdateEditor(SAVE, gocui.EditorFunc(saveEditor))
 
-	if err := gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, Quit); err != nil {
+	if err := gui.SetKeybinding("", gocui.KeyCtrlD, gocui.ModNone, Quit); err != nil {
 		log.Panicln(err)
 	}
 	if err := gui.SetKeybinding("", gocui.KeyTab, gocui.ModNone, changeView); err != nil {
@@ -116,6 +116,7 @@ func changeView(g *gocui.Gui, v *gocui.View) error {
 		g.Cursor = true
 	}
 	g.SetCurrentView(ViewEnum(screen).String())
+	g.SetViewOnTop(ViewEnum(screen).String())
 
 	return nil
 }

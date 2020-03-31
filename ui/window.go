@@ -21,7 +21,7 @@ type Window struct {
 var (
 	instance     Window
 	once         sync.Once
-	helpContents = "Ctrl+C: Exit  | Tab: Next View | Ctrl+S: Save"
+	helpContents = "Ctrl+D: Exit  | Tab: Next View | Ctrl+S: Save"
 )
 
 // GetWindow creates new window if note created and returns window
@@ -80,10 +80,15 @@ func (w *Window) Resize(maxX, maxY int) {
 		w.updateViewDimensions(PANEL, Dimensions{0, 0, 0, 0})
 	}
 	if tbBuffer != 0 {
+		// w.updateViewDimensions(SEARCH, Dimensions{
+		// 	w.border + panelWidth, w.border,
+		// 	maxX - w.border, tbBuffer,
+		// })
 		w.updateViewDimensions(SEARCH, Dimensions{
 			w.border + panelWidth, w.border,
-			maxX - w.border, tbBuffer,
+			maxX - w.border, tbBuffer + strings.Count(w.views[SEARCH].content, "\n"),
 		})
+
 		w.updateViewDimensions(HELP, Dimensions{
 			w.border, maxY - tbBuffer,
 			maxX - w.border, maxY - w.border,
