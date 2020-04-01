@@ -122,10 +122,10 @@ func (w Window) SetViews(gui GoCui) error {
 					gView.Editable = true
 					gView.Editor = view.editor
 					//Bodge to get good highlighting on panel
+					gView.SelBgColor = gocui.ColorGreen
+					gView.SelFgColor = gocui.ColorBlack
 					if name == PANEL {
 						gView.Highlight = true
-						gView.SelBgColor = gocui.ColorGreen
-						gView.SelFgColor = gocui.ColorBlack
 					}
 				}
 			}

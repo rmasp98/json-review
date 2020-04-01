@@ -57,7 +57,6 @@ const (
 
 // Edit stuff
 func (e *QueryEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
-
 	if _, lineNum := v.Cursor(); lineNum == 0 {
 		basicEditor(v, key, ch, mod)
 	} else {
@@ -93,13 +92,9 @@ func (e *QueryEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modi
 	queryDetails := e.getPossibleQueries(search)
 	GetWindow().UpdateViewContent(SEARCH, search+queryDetails)
 
-	if _, lineNum := v.Cursor(); lineNum == 0 {
-		v.Highlight = false
-	} else {
-		v.Highlight = true
-		v.SelBgColor = gocui.ColorGreen
-		v.SelFgColor = gocui.ColorBlack
-	}
+	_, lineNum := v.Cursor()
+	v.Highlight = lineNum != 0
+
 }
 
 func (e QueryEditor) getPossibleQueries(search string) string {

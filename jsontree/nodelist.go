@@ -77,7 +77,7 @@ func (n NodeList) GetJSON(num int) string {
 			finalJSON += n.getNodeEndings(index, baseLevel, &num)
 
 			if num > 0 && index == len(n.nodes)-1 {
-				finalJSON += "\n" + braces[n.nodes[0].value]
+				finalJSON += "\n" + brackets[n.nodes[0].value]
 			}
 			index++
 			if num <= 0 || (index < len(n.nodes) && n.nodes[index].Level <= baseLevel) {
@@ -246,22 +246,30 @@ func (n NodeList) isLastOnLevel(currentIndex int) bool {
 	return true
 }
 
+var brackets = map[string]string{"{": "}", "[": "]"}
+
+// getNodeEndings returns any closed brackets or commas required after nodeIndex
 func (n NodeList) getNodeEndings(nodeIndex, baseLevel int, count *int) string {
 	var endings string
 	if nodeIndex+1 < len(n.nodes) {
 		currentLevel := n.nodes[nodeIndex].Level
 		nextLevel := n.nodes[nodeIndex+1].Level
+		// Close all brackets
 		for level := currentLevel; level > nextLevel && level > baseLevel; level-- {
 			if *count <= 0 {
 				break
 			}
 			levelParent := n.getLevelParent(nodeIndex, level)
 			if n.nodes[levelParent].IsMatched {
-				endings += "\n" + strings.Repeat(spacing, level-baseLevel-1) + braces[n.nodes[levelParent].value]
+				endings += "\n" + strings.Repeat(spacing, level-baseLevel-1) + brackets[n.nodes[levelParent].value]
 				*count--
 			}
 		}
-		if (endings != "" && nextLevel > baseLevel) || (currentLevel == nextLevel && n.nodes[nodeIndex+1].IsMatched) {
+		// If finish closing brackets and not reached end must be another node on same level as last bracket
+		if endings != "" && nextLevel > baseLevel {
+			endings += ","
+		}
+		if currentLevel == nextLevel && n.nodes[nodeIndex].IsMatched && n.nodes[nodeIndex+1].IsMatched {
 			endings += ","
 		}
 	}
@@ -275,41 +283,6 @@ func (n NodeList) getLevelParent(nodeIndex, level int) int {
 		}
 	}
 	return 0
-}
-
-// func (n NodeList) outputAnyCloseBrackets(index int, num *int, baseLevel int) string {
-// 	nodeLevel := n.nodes[index].Level
-// 	var output string
-// 	if index < len(n.nodes)-1 {
-// 		if nodeLevel > n.nodes[index+1].Level {
-// 			for i := nodeLevel; i > n.nodes[index+1].Level && i > baseLevel; i-- {
-// 				if *num <= 0 {
-// 					return output
-// 				}
-// 				output += "\n" + strings.Repeat(spacing, i-1-baseLevel) + n.getParentType(i, index)
-// 				(*num)--
-// 			}
-// 			if n.nodes[index+1].Level > baseLevel {
-// 				output += ","
-// 			}
-// 		} else if nodeLevel == n.nodes[index+1].Level {
-// 			output += ","
-// 		}
-// 	}
-// 	return output
-// }
-
-var braces = map[string]string{"{": "}", "[": "]"}
-
-func (n NodeList) getParentType(level, index int) string {
-	for i := index; i > 0; i-- {
-		node := n.nodes[i]
-		newLevel := node.Level
-		if newLevel == level-1 && (n.nodes[i].value == "{" || n.nodes[i].value == "[") {
-			return braces[n.nodes[i].value]
-		}
-	}
-	return "ERROR"
 }
 
 //Sorry for the name...

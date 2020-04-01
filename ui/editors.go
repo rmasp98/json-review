@@ -76,28 +76,18 @@ func (e *DisplayEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mo
 	switch {
 	case key == gocui.KeyArrowUp:
 		e.nodeList.MoveJSONPosition(-1)
-	// 	x, y := v.Origin()
-	// 	v.SetOrigin(x, y-1)
 	case key == gocui.KeyArrowDown:
 		e.nodeList.MoveJSONPosition(1)
-		// 	x, y := v.Origin()
-		// 	v.SetOrigin(x, y+1)
-		// case key == gocui.KeyArrowLeft:
-		// 	x, y := v.Origin()
-		// 	v.SetOrigin(x-1, y)
-		// case key == gocui.KeyArrowRight:
-		// 	x, y := v.Origin()
-		// 	v.SetOrigin(x+1, y)
-		// case key == gocui.KeyPgup:
-		// 	x, y := v.Origin()
-		// 	if y-25 > 0 {
-		// 		v.SetOrigin(x, y-25)
-		// 	} else {
-		// 		v.SetOrigin(x, 0)
-		// 	}
-		// case key == gocui.KeyPgdn:
-		// 	x, y := v.Origin()
-		// 	v.SetOrigin(x, y+25)
+	case key == gocui.KeyArrowLeft:
+		x, _ := v.Origin()
+		v.SetOrigin(x-1, 0)
+	case key == gocui.KeyArrowRight:
+		x, _ := v.Origin()
+		v.SetOrigin(x+1, 0)
+	case key == gocui.KeyPgup:
+		e.nodeList.MoveJSONPosition(-25)
+	case key == gocui.KeyPgdn:
+		e.nodeList.MoveJSONPosition(25)
 	}
 }
 
