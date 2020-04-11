@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 )
 
 // QueryList allow viewing, editing and saving of the list of Common Misconfigurations
@@ -20,7 +21,7 @@ type QueryData struct {
 
 // NewQueryList stuff
 func NewQueryList() QueryList {
-	return QueryList{}
+	return QueryList{make(map[string]QueryData)}
 }
 
 // GetNames stuff
@@ -29,6 +30,7 @@ func (c QueryList) GetNames() []string {
 	for key := range c.list {
 		names = append(names, key)
 	}
+	sort.Strings(names)
 	return names
 }
 

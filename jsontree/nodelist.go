@@ -2,6 +2,7 @@ package jsontree
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -15,7 +16,7 @@ type NodeList struct {
 	topNode    int
 	activeNode int
 	jsonStart  int
-	regex      string
+	findNode   int
 }
 
 // NewNodeList requires a valid json string and returns a NodeList object
@@ -27,9 +28,9 @@ func NewNodeList(jsonData string) (NodeList, error) {
 		return NodeList{}, err
 	}
 
-	nodes := []TreeNode{TreeNode{"Root", getNodeValue(treeNodes), "", 0, 0, true, true}}
+	nodes := []TreeNode{TreeNode{"Root", getNodeValue(treeNodes), "", 0, 0, true, false, false}}
 	nodes = append(nodes, treeNodes...)
-	nodeList := NodeList{nodes, 0, 0, 0, ""}
+	nodeList := NodeList{nodes, 0, 0, 0, -1}
 	for index := range nodeList.nodes {
 		nodeList.nodes[index].Parent = nodeList.getParentIndex(index)
 		nodeList.updatePrefix(index)
@@ -40,12 +41,29 @@ func NewNodeList(jsonData string) (NodeList, error) {
 // Size returns the number of visible nodes
 func (n NodeList) Size() int {
 	size := 0
-	for index := range n.nodes {
-		if n.isVisible(index) {
+	for _, node := range n.nodes {
+		if node.IsVisible() {
 			size++
 		}
 	}
 	return size
+}
+
+// Clear resets any affect on nodes
+func (n *NodeList) Clear() {
+	for index := range n.nodes {
+		n.nodes[index].Clear()
+	}
+}
+
+// TODO: Move IsFiltered and IsExpanded into functions that are checked either
+// through IsVisible function or via other functions
+
+// FilterAll sets all (but root) nodes to filtered
+func (n *NodeList) FilterAll() {
+	for index := 1; index < len(n.nodes); index++ {
+		n.nodes[index].Filter(true)
+	}
 }
 
 // GetNodes returns a formated string list of visible nodes from topNode
@@ -53,7 +71,7 @@ func (n NodeList) Size() int {
 func (n NodeList) GetNodes(num int) string {
 	var output string
 	for index := n.topNode; num > 0 && index < len(n.nodes); index++ {
-		if n.isVisible(index) {
+		if n.nodes[index].IsVisible() {
 			n.updatePrefix(index)
 			output += n.nodes[index].GetNode() + "\n"
 			num--
@@ -63,18 +81,18 @@ func (n NodeList) GetNodes(num int) string {
 }
 
 // GetJSON returns a formatted json string, num lines long for
-// the active node. Fields can be hidden using the Search function
+// the active node. Fields can be hidden using the Filter function
 func (n NodeList) GetJSON(num int) string {
 	var finalJSON string
 	if num > 0 {
 		baseLevel := n.nodes[n.activeNode].Level
 		for index := n.jsonStart; index < len(n.nodes); {
 			levelDiff := n.nodes[index].Level - baseLevel
-			if n.nodes[index].IsMatched {
-				finalJSON += "\n" + n.nodes[index].GetJSON(levelDiff)
+			if nodeJSON := n.nodes[index].GetJSON(levelDiff); nodeJSON != "" {
+				finalJSON += "\n" + nodeJSON
 				num--
 			}
-			finalJSON += n.getNodeEndings(index, baseLevel, &num)
+			finalJSON += n.getNodeEndings(index, baseLevel)
 
 			if num > 0 && index == len(n.nodes)-1 {
 				finalJSON += "\n" + brackets[n.nodes[0].value]
@@ -95,7 +113,7 @@ func (n *NodeList) MoveTopNode(offset int) {
 	var step int
 	step, offset = getDirectionAndAbs(offset)
 	for index := n.topNode; index < len(n.nodes) && index >= 0 && offset >= 0; index = index + step {
-		if n.isVisible(index) {
+		if n.nodes[index].IsVisible() {
 			n.topNode = index
 			offset--
 		}
@@ -149,30 +167,79 @@ func (n *NodeList) CollapseActiveNode() int {
 	return n.getVisibleIndex(n.activeNode)
 }
 
-// Search stuff
-func (n *NodeList) Search(regex string) error {
-	r, err := regexp.Compile(regex)
-	if err != nil {
-		return err
+// GetNodesMatching return node indicies matching regex in matchType
+func (n NodeList) GetNodesMatching(regex string, matchType MatchType, equal bool) []int {
+	var matchList []int
+	r, _ := regexp.Compile(regex)
+	for index, node := range n.nodes {
+		if node.Match(r, matchType) == equal {
+			matchList = append(matchList, index)
+		}
 	}
-	for index := 1; index < len(n.nodes); index++ {
-		if n.nodes[index].Search(r) {
+	return matchList
+}
+
+// GetChildrenMatching stuff
+func (n NodeList) GetChildrenMatching(nodeIndex int, regex string, matchType MatchType, equal bool, recursive bool) []int {
+	return []int{}
+}
+
+// GetParentChildrenMatching stuff
+func (n NodeList) GetParentChildrenMatching(nodeIndex int, regex string, matchType MatchType, equal bool, recursive bool) []int {
+	return []int{}
+}
+
+// ApplyFilter stuff
+func (n *NodeList) ApplyFilter(nodes []int) error {
+	n.FilterAll()
+	for _, index := range nodes {
+		if index > 0 && index < len(n.nodes) {
+			n.nodes[index].Filter(false)
 			for i := n.nodes[index].Parent; i != 0; i = n.nodes[i].Parent {
-				n.nodes[i].IsMatched = true
+				n.nodes[i].Filter(false)
 			}
 		}
 	}
-	// Bodge to prevent everything from disappearing if content too small
-	n.topNode = 0
-	n.setActiveNode(0)
 	return nil
 }
 
-// Internal functions/////////////////////////////////////////////////////
-
-func (n NodeList) isVisible(nodeIndex int) bool {
-	return nodeIndex == 0 || (n.nodes[nodeIndex].IsExpanded && n.nodes[nodeIndex].IsMatched)
+// ApplyHighlight sets IsHighlighted on all nodes in nodes
+func (n *NodeList) ApplyHighlight(nodes []int) error {
+	for index := range n.nodes {
+		n.nodes[index].IsHighlighted = false
+	}
+	if len(n.nodes) > len(nodes) {
+		for _, index := range nodes {
+			if index > 0 && index < len(n.nodes) {
+				n.nodes[index].IsHighlighted = true
+			}
+		}
+	}
+	return nil
 }
+
+// FindNextHighlightedNode moves GetJSON to the next matched node
+func (n *NodeList) FindNextHighlightedNode() error {
+	levelSize := n.getLevelEndIndex(n.activeNode+1) - n.activeNode
+	startOffset := n.jsonStart - n.activeNode
+	offset := startOffset
+	for {
+		index := n.activeNode + offset
+		if n.nodes[index].IsHighlighted && index != n.findNode {
+			n.jsonStart = index
+			n.findNode = index
+			return nil
+		}
+
+		offset = (offset + 1) % levelSize
+		if offset == startOffset {
+			break
+		}
+	}
+	return fmt.Errorf("No matches in this node")
+}
+
+// Internal functions/////////////////////////////////////////////////////
 
 func (n *NodeList) setActiveNode(nodeIndex int) {
 	n.activeNode = nodeIndex
@@ -199,6 +266,8 @@ func (n NodeList) getLevelEndIndex(nodeIndex int) int {
 	}
 	return len(n.nodes) - 1
 }
+
+// TODO: Move to treeNode suppling parent prefix and bool isLastOnLevel
 
 func (n *NodeList) updatePrefix(index int) {
 	if index > 0 {
@@ -237,7 +306,7 @@ func (n NodeList) isLastOnLevel(currentIndex int) bool {
 	targetLevel := n.nodes[currentIndex].Level
 	for index := currentIndex + 1; index < len(n.nodes); index++ {
 		nodeLevel := n.nodes[index].Level
-		if nodeLevel == targetLevel && n.isVisible(index) {
+		if nodeLevel == targetLevel && n.nodes[index].IsVisible() {
 			return false
 		} else if nodeLevel < targetLevel {
 			return true
@@ -246,31 +315,21 @@ func (n NodeList) isLastOnLevel(currentIndex int) bool {
 	return true
 }
 
-var brackets = map[string]string{"{": "}", "[": "]"}
-
 // getNodeEndings returns any closed brackets or commas required after nodeIndex
-func (n NodeList) getNodeEndings(nodeIndex, baseLevel int, count *int) string {
+func (n NodeList) getNodeEndings(nodeIndex, baseLevel int) string {
 	var endings string
 	if nodeIndex+1 < len(n.nodes) {
 		currentLevel := n.nodes[nodeIndex].Level
 		nextLevel := n.nodes[nodeIndex+1].Level
-		// Close all brackets
+		if nextLevel <= currentLevel {
+			endings = n.nodes[nodeIndex].GetEnding(n.isLastOnLevel(nodeIndex))
+		}
 		for level := currentLevel; level > nextLevel && level > baseLevel; level-- {
-			if *count <= 0 {
-				break
-			}
 			levelParent := n.getLevelParent(nodeIndex, level)
-			if n.nodes[levelParent].IsMatched {
-				endings += "\n" + strings.Repeat(spacing, level-baseLevel-1) + brackets[n.nodes[levelParent].value]
-				*count--
+			nodeEnding := n.nodes[levelParent].GetEnding(n.isLastOnLevel(levelParent))
+			if nodeEnding != "" {
+				endings += "\n" + strings.Repeat(spacing, level-baseLevel-1) + nodeEnding
 			}
-		}
-		// If finish closing brackets and not reached end must be another node on same level as last bracket
-		if endings != "" && nextLevel > baseLevel {
-			endings += ","
-		}
-		if currentLevel == nextLevel && n.nodes[nodeIndex].IsMatched && n.nodes[nodeIndex+1].IsMatched {
-			endings += ","
 		}
 	}
 	return endings
@@ -288,13 +347,13 @@ func (n NodeList) getLevelParent(nodeIndex, level int) int {
 //Sorry for the name...
 func (n *NodeList) alterNodesExpandedness(startIndex, endIndex int, visible bool) {
 	for index := startIndex; index < endIndex+1; index++ {
-		n.nodes[index].IsExpanded = visible
+		n.nodes[index].SetExpanded(visible)
 	}
 }
 
 func (n NodeList) getNodeIndex(visibleIndex int) int {
 	for index := n.topNode; index < len(n.nodes); index++ {
-		if n.isVisible(index) {
+		if n.nodes[index].IsVisible() {
 			if visibleIndex == 0 {
 				return index
 			}
@@ -307,7 +366,7 @@ func (n NodeList) getNodeIndex(visibleIndex int) int {
 func (n NodeList) getVisibleIndex(nodeIndex int) int {
 	visibleIndex := 0
 	for index := n.topNode; index < nodeIndex; index++ {
-		if n.isVisible(index) {
+		if n.nodes[index].IsVisible() {
 			visibleIndex++
 		}
 	}

@@ -19,9 +19,9 @@ type Window struct {
 }
 
 var (
-	instance     Window
-	once         sync.Once
-	helpContents = "Ctrl+D: Exit  | Tab: Next View | Ctrl+S: Save"
+	instance Window
+	once     sync.Once
+	helpBase = "Ctrl+D: Exit  | Tab: Next View | Ctrl+S: Save"
 )
 
 // GetWindow creates new window if note created and returns window
@@ -31,8 +31,8 @@ func GetWindow() *Window {
 			PANEL:   Layout{MinSize{10, 1}, Dimensions{0, 0, 0, 0}, "", nil},
 			SEARCH:  Layout{MinSize{1, 2}, Dimensions{0, 0, 0, 0}, "", nil},
 			DISPLAY: Layout{MinSize{1, 1}, Dimensions{0, 0, 0, 0}, "", nil},
-			HELP:    Layout{MinSize{1, 2}, Dimensions{0, 0, 0, 0}, helpContents, nil},
-			SAVE:    Layout{MinSize{1, 1}, Dimensions{50, 30, 100, 32}, "", nil}},
+			HELP:    Layout{MinSize{1, 2}, Dimensions{0, 0, 0, 0}, helpBase, nil},
+			POPUP:   Layout{MinSize{1, 1}, Dimensions{50, 30, 100, 32}, "", nil}},
 			0.2, 1, 3, false, 0}
 	})
 	return &instance
@@ -112,7 +112,9 @@ func (w Window) SetViews(gui GoCui) error {
 	for name, view := range w.views {
 		if view.dim != (Dimensions{0, 0, 0, 0}) {
 			if gView, err := gui.SetView(name.String(), view.dim.X0, view.dim.Y0, view.dim.X1, view.dim.Y1); err != gocui.ErrUnknownView {
-				gView.Title = name.String()
+				if gView.Title == "" {
+					gView.Title = name.String()
+				}
 				if view.content != "" {
 					gView.Clear()
 					fmt.Fprint(gView, view.content)
@@ -132,10 +134,10 @@ func (w Window) SetViews(gui GoCui) error {
 		}
 	}
 	if !w.saveVisible {
-		gui.SetViewOnBottom(SAVE.String())
+		gui.SetViewOnBottom(POPUP.String())
 	} else {
-		gui.SetCurrentView(SAVE.String())
-		gui.SetViewOnTop(SAVE.String())
+		gui.SetCurrentView(POPUP.String())
+		gui.SetViewOnTop(POPUP.String())
 	}
 	return nil
 }

@@ -34,12 +34,23 @@ const (
 	DISPLAY
 	// HELP a
 	HELP
-	// SAVE a
-	SAVE
+	// POPUP a
+	POPUP
 )
 
 func (ve ViewEnum) String() string {
-	return [...]string{"Panel", "Search", "Display", "Help", "Filename"}[ve]
+	return [...]string{"Panel", "Search", "Display", "Help", "Popup"}[ve]
+}
+
+// Help stuff
+func (ve ViewEnum) Help() string {
+	return [...]string{
+		" | E: Expand Node | C: Collapse Node",             //PANEL
+		" | Ctrl+Q: Toggle Query Mode | Ctrl+N: Find Next", //SEARCH
+		"", //DISPLAY
+		"", //HELP
+		"", //POPUP
+	}[ve]
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -75,7 +86,6 @@ func NewCursesUI(json *jsontree.NodeList) CursesUI {
 	GetWindow().UpdateEditor(PANEL, NewNodesEditor(json))
 	GetWindow().UpdateEditor(SEARCH, NewSearchEditor(json))
 	GetWindow().UpdateEditor(DISPLAY, NewDisplayEditor(json))
-	GetWindow().UpdateEditor(SAVE, gocui.EditorFunc(saveEditor))
 
 	if err := gui.SetKeybinding("", gocui.KeyCtrlD, gocui.ModNone, Quit); err != nil {
 		log.Panicln(err)
@@ -115,6 +125,7 @@ func changeView(g *gocui.Gui, v *gocui.View) error {
 	} else {
 		g.Cursor = true
 	}
+	GetWindow().UpdateViewContent(HELP, helpBase+ViewEnum(screen).Help())
 	g.SetCurrentView(ViewEnum(screen).String())
 	g.SetViewOnTop(ViewEnum(screen).String())
 

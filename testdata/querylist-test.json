@@ -1,9 +1,9 @@
 {
-    "test1": {
+    "test1more": {
         "regex": "[a-z]{5}",
         "description": "First test"
     },
-    "test2": {
+    "test2less": {
         "regex":"[0-9]{2}",
         "description": "Second test"
     }
