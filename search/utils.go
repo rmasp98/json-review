@@ -67,6 +67,16 @@ var controls = []string{
 	"AnyChildHasAny",
 }
 
+func isMainCommand(command Command) bool {
+	if command.Control == controls[0] || // Any
+		command.Control == controls[1] || // Key
+		command.Control == controls[2] { // Value
+		return true
+	}
+	return false
+
+}
+
 var conditionals = []string{
 	"==",
 	"!=",
@@ -77,5 +87,6 @@ var operators = []string{
 	"|",  // Intersection
 	"-",  // Subtraction of matching elements
 	"&&", // Show all if second contains elements
-	"if", // Only show first if second contains elements
+	"<-", // Only show first if second contains elements
+	"->", // Only show second elements
 }

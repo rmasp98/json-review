@@ -68,7 +68,11 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 
 	if key == gocui.KeyEnter {
 		input, _ := v.Line(0)
-		e.s.Execute(input, e.nodeList)
+		if err := e.s.Execute(input, e.nodeList); err != nil {
+			input, _ := v.Line(0)
+			GetWindow().UpdateViewContent(SEARCH, input+"\n"+err.Error())
+			return
+		}
 	} else if key == gocui.KeyCtrlQ {
 		e.s.ToggleQueryMode()
 		clearInput(v)

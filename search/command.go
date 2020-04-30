@@ -5,7 +5,9 @@ import (
 	"regexp"
 )
 
-// Command stuff
+// Command contains data for running an intelligent command
+// format: <operator> <control><equal><regex> <bracket>
+// e.g. + Any=="test" (
 type Command struct {
 	Control  string
 	Equal    bool
@@ -42,6 +44,16 @@ func (c Command) RunOperation(left, right []int) []int {
 		if len(left) > 0 && len(right) > 0 {
 			return append(left, right...)
 		}
+	case "|":
+		return intersection(left, right)
+	case "<-":
+		if len(right) > 0 {
+			return left
+		}
+	case "->":
+		if len(left) > 0 {
+			return right
+		}
 	}
 	return []int{}
 }
@@ -56,6 +68,14 @@ func (c Command) HasCloseBracket() bool {
 	return c.Bracket == ")"
 }
 
+// GetConditionalString returns the original conditional input for errors
+func (c Command) GetConditionalString() string {
+	if c.Equal {
+		return c.Control + "==" + c.Regex
+	}
+	return c.Control + "!=" + c.Regex
+}
+
 func subtract(left, right []int) []int {
 	var result []int
 	for _, elemLeft := range left {
@@ -67,6 +87,18 @@ func subtract(left, right []int) []int {
 		}
 		if !matched {
 			result = append(result, elemLeft)
+		}
+	}
+	return result
+}
+
+func intersection(left, right []int) []int {
+	var result []int
+	for _, elemLeft := range left {
+		for _, elemRight := range right {
+			if elemLeft == elemRight {
+				result = append(result, elemLeft)
+			}
 		}
 	}
 	return result

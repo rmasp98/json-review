@@ -33,7 +33,7 @@ func TestOperationReturnsExpectedForAmpersand(t *testing.T) {
 	}
 }
 
-func TestOperationReturnsExpectedForAmpersandIfNoneInInArray(t *testing.T) {
+func TestOperationReturnsExpectedForAmpersandIfNoneInArray(t *testing.T) {
 	command := search.Command{"", true, "", "&&", ""}
 	actual := command.RunOperation([]int{1, 2}, []int{})
 	expected := []int{}
@@ -55,6 +55,33 @@ func TestOperationReturnsExpectedForMinus(t *testing.T) {
 	command := search.Command{"", true, "", "-", ""}
 	actual := command.RunOperation([]int{1, 2, 3, 4}, []int{2, 4})
 	expected := []int{1, 3}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	}
+}
+
+func TestOperationReturnsExpectedForIntersection(t *testing.T) {
+	command := search.Command{"", true, "", "|", ""}
+	actual := command.RunOperation([]int{1, 2, 3, 4}, []int{2, 4})
+	expected := []int{2, 4}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	}
+}
+
+func TestOperationReturnsExpectedForIf(t *testing.T) {
+	command := search.Command{"", true, "", "<-", ""}
+	actual := command.RunOperation([]int{1, 2, 3, 4}, []int{2, 4})
+	expected := []int{1, 2, 3, 4}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	}
+}
+
+func TestOperationReturnsExpectedForAntiIf(t *testing.T) {
+	command := search.Command{"", true, "", "->", ""}
+	actual := command.RunOperation([]int{1, 2, 3, 4}, []int{2, 4})
+	expected := []int{2, 4}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
 	}

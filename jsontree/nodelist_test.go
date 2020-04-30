@@ -378,6 +378,42 @@ func TestCanReturnListofNonMatchingNodes(t *testing.T) {
 	}
 }
 
+func TestCanFindMatchingChildrenOfANodeNonRecursively(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	expected := []int{2}
+	actual := nodeList.GetChildrenMatching(1, "Gloss", jsontree.ANY, true, false)
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
+	}
+}
+
+func TestCanFindMatchingChildrenOfANodeRecursively(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	expected := []int{2, 3, 6, 7, 11, 12}
+	actual := nodeList.GetChildrenMatching(1, "Gloss", jsontree.ANY, true, true)
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
+	}
+}
+
+func TestCanFindMatchingChildrenInParent(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	expected := []int{15}
+	actual := nodeList.GetParentChildrenMatching(2, "title", jsontree.ANY, true, false)
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
+	}
+}
+
+func TestCanFindMatchingChildrenInRecursiveParents(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	expected := []int{15, 16}
+	actual := nodeList.GetParentChildrenMatching(2, "title", jsontree.ANY, true, true)
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////
 //  TEST DATA
 

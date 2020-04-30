@@ -181,12 +181,28 @@ func (n NodeList) GetNodesMatching(regex string, matchType MatchType, equal bool
 
 // GetChildrenMatching stuff
 func (n NodeList) GetChildrenMatching(nodeIndex int, regex string, matchType MatchType, equal bool, recursive bool) []int {
-	return []int{}
+	var matchList []int
+	r, _ := regexp.Compile(regex)
+	for index := nodeIndex + 1; index <= n.getLevelEndIndex(nodeIndex+1); index++ {
+		if recursive || n.nodes[index].Level == n.nodes[nodeIndex+1].Level {
+			if n.nodes[index].Match(r, matchType) {
+				matchList = append(matchList, index)
+			}
+		}
+	}
+	return matchList
 }
 
 // GetParentChildrenMatching stuff
 func (n NodeList) GetParentChildrenMatching(nodeIndex int, regex string, matchType MatchType, equal bool, recursive bool) []int {
-	return []int{}
+	var matchList []int
+	for index := n.nodes[nodeIndex].Parent; ; index = n.nodes[index].Parent {
+		matchList = append(matchList, n.GetChildrenMatching(index, regex, matchType, equal, false)...)
+		if !recursive || index == 0 {
+			break
+		}
+	}
+	return matchList
 }
 
 // ApplyFilter stuff
