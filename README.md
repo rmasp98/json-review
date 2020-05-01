@@ -6,9 +6,7 @@ kube-review is an ncurses (terminal GUI) based tool for reviewing the configurat
 
 ## Eventual Features
 * Interactive search in GUI 
-  * regex search by default 
-  * Can also use bunch of pre-writen regexes for known issues
-  * Can add additional to pre-written
+  * manually search through data using search functions
   * Introduce a ctrl-s to save output
     * If in query mode, offer ability to save as vulnXML
 * Loading of JSON
@@ -19,20 +17,18 @@ kube-review is an ncurses (terminal GUI) based tool for reviewing the configurat
   * query based search
   * intelligent search 
     * allow user to define fields around match to retain e.g. names/ids
-    * need to figure out an intelligent cut off (potentially when exiting an array)
+    * find extra information from children or parents of match
+    * combine results in various ways (union, intersection, conditional, etc.)
   * User will be able to find or filter with the search
 * Query without GUI
   * define which queries to run
-  * option for just passing a regex
-  * option for intelligent search
+  * option for just passing a regex or intelligent search
 * Save
   * Basic just output JSON of search
   * Create VulnXML issues (would have to be with queries)
   * Save config gained from kubectl command
 
 ## TODO
-* Intelligent search
-* Interactive save
 * Create a predefined querylist
 * kubectl pull of config
 * Create and save query

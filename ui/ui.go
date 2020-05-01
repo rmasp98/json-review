@@ -80,9 +80,6 @@ func NewCursesUI(json *jsontree.NodeList) CursesUI {
 		return GetWindow().SetViews(gui)
 	})
 
-	y, _ := gui.Size()
-	GetWindow().UpdateViewContent(DISPLAY, json.GetJSON(y))
-	GetWindow().UpdateViewContent(PANEL, json.GetNodes(y))
 	GetWindow().UpdateEditor(PANEL, NewNodesEditor(json))
 	GetWindow().UpdateEditor(SEARCH, NewSearchEditor(json))
 	GetWindow().UpdateEditor(DISPLAY, NewDisplayEditor(json))
@@ -93,10 +90,7 @@ func NewCursesUI(json *jsontree.NodeList) CursesUI {
 	if err := gui.SetKeybinding("", gocui.KeyTab, gocui.ModNone, changeView); err != nil {
 		log.Panicln(err)
 	}
-	if err := gui.SetKeybinding("", gocui.KeyCtrlS, gocui.ModNone, func(g *gocui.Gui, v *gocui.View) error {
-		GetWindow().ShowSaveView(true)
-		return nil
-	}); err != nil {
+	if err := gui.SetKeybinding("", gocui.KeyCtrlS, gocui.ModNone, NewSave(json).CreateSaveDialog); err != nil {
 		log.Panicln(err)
 	}
 
@@ -119,15 +113,16 @@ func Quit(g *gocui.Gui, v *gocui.View) error {
 var screen = 0
 
 func changeView(g *gocui.Gui, v *gocui.View) error {
-	screen = (screen + 1) % 3
-	if ViewEnum(screen) == PANEL || ViewEnum(screen) == DISPLAY {
-		g.Cursor = false
-	} else {
-		g.Cursor = true
+	if g.CurrentView() == nil || g.CurrentView().Name() != POPUP.String() {
+		screen = (screen + 1) % 3
+		if ViewEnum(screen) == PANEL || ViewEnum(screen) == DISPLAY {
+			g.Cursor = false
+		} else {
+			g.Cursor = true
+		}
+		GetWindow().UpdateViewContent(HELP, helpBase+ViewEnum(screen).Help())
+		g.SetCurrentView(ViewEnum(screen).String())
+		g.SetViewOnTop(ViewEnum(screen).String())
 	}
-	GetWindow().UpdateViewContent(HELP, helpBase+ViewEnum(screen).Help())
-	g.SetCurrentView(ViewEnum(screen).String())
-	g.SetViewOnTop(ViewEnum(screen).String())
-
 	return nil
 }

@@ -39,9 +39,9 @@ func (c QueryList) GetDescription(name string) string {
 	return c.list[name].Description
 }
 
-// GetRegex stuff
-func (c QueryList) GetRegex(name string) string {
-	return c.list[name].Regex
+// GetQuery stuff
+func (c QueryList) GetQuery(name string) (string, QueryEnum) {
+	return c.list[name].Regex, REGEX
 }
 
 // Add stuff

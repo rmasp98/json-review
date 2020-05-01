@@ -20,53 +20,50 @@ func NewSearch(queryMode QueryEnum, qlFile string) Search {
 }
 
 // GetHints stuff
-func (s Search) GetHints(input string) string {
+func (s Search) GetHints(input string, cursorPos int) string {
 	output := ""
-	if s.queryMode == QUERY && input != "" {
-		for _, query := range s.getPossibleQueries(input) {
-			if input == query {
-				return ""
+	if input != "" {
+		for _, hint := range s.getPossibleHints(input, cursorPos) {
+			output += "\n" + whiteBold + hint
+			if s.queryMode == QUERY {
+				output += " - " + redBold + s.ql.GetDescription(hint)
 			}
-			output += "\n" + whiteBold + query + " - " + redBold + s.ql.GetDescription(query) + reset
+			output += reset
 		}
 	}
 	return output
 }
 
+// InsertSelectedHint returns the search string with hint inserted and the position
+// of the end of inserted hint
+func (s Search) InsertSelectedHint(input string, cursorPos int, index int) (string, int) {
+	hint := s.getSelectedHint(input, cursorPos, index)
+	replaceStart := 0
+	if s.queryMode == INTELLIGENT {
+		replaceStart, _ = getInterestingSubstringStart(input[:cursorPos])
+	}
+	space := " "
+	if replaceStart == 0 || input[replaceStart-1] == '(' {
+		space = ""
+	}
+	return input[:replaceStart] + space + hint + input[cursorPos:], len(input[:replaceStart] + space + hint)
+}
+
 // Execute runs a search based on input, QueryMode and searchMode
 func (s Search) Execute(input string, nodeList sNodeList) error {
-	regex := input
-	if s.queryMode == QUERY {
-		regex = s.ql.GetRegex(input)
-	} else if s.queryMode == INTELLIGENT {
+	qMode := s.queryMode
+	if qMode == QUERY {
+		input, qMode = s.ql.GetQuery(input)
+	}
+
+	if qMode == INTELLIGENT {
 		intelligent, err := NewIntelligent(input)
 		if err != nil {
 			return err
 		}
-		intelligent.Execute(nodeList)
-		return nil
+		return intelligent.Execute(nodeList, s.functionMode)
 	}
-	switch s.functionMode {
-	case FIND:
-		matchNodes := nodeList.GetNodesMatching(regex, jsontree.ANY, true)
-		nodeList.ApplyHighlight(matchNodes)
-		nodeList.FindNextHighlightedNode()
-	case FILTER:
-		matchNodes := nodeList.GetNodesMatching(regex, jsontree.ANY, true)
-		nodeList.ApplyFilter(matchNodes)
-	}
-	return nil
-}
-
-// GetQueryName get query of index in list of matched querys to user input
-func (s Search) GetQueryName(input string, index int) string {
-	if s.queryMode == QUERY {
-		queries := s.getPossibleQueries(input)
-		if index < len(queries) && index >= 0 {
-			return queries[index]
-		}
-	}
-	return ""
+	return s.executeRegex(input, nodeList)
 }
 
 // ToggleQueryMode switches between regex and query mode
@@ -88,13 +85,44 @@ func (s Search) GetModeInfo() string {
 	return mode
 }
 
-func (s Search) getPossibleQueries(input string) []string {
-	var queries []string
-	r, _ := regexp.Compile(input)
-	for _, query := range s.ql.GetNames() {
-		if r.MatchString(query) {
-			queries = append(queries, query)
-		}
+func (s Search) getSelectedHint(input string, cursorPos int, index int) string {
+	hints := s.getPossibleHints(input, cursorPos)
+	if index < len(hints) && index >= 0 {
+		return hints[index]
 	}
-	return queries
+	return ""
+}
+
+func (s Search) getPossibleHints(input string, cursorPos int) []string {
+	if s.queryMode == QUERY {
+		var queries []string
+		if input != "" {
+			r, _ := regexp.Compile(input)
+			for _, query := range s.ql.GetNames() {
+				if r.MatchString(query) {
+					queries = append(queries, query)
+				}
+				if input == query {
+					return []string{}
+				}
+			}
+		}
+		return queries
+	} else if s.queryMode == INTELLIGENT {
+		return GetIntelligentHints(input, cursorPos)
+	}
+	return []string{}
+}
+
+func (s Search) executeRegex(regex string, nodeList sNodeList) error {
+	matchNodes := nodeList.GetNodesMatching(regex, jsontree.ANY, true)
+	if s.functionMode == FILTER {
+		return nodeList.ApplyFilter(matchNodes)
+	} else if s.functionMode == FIND {
+		if err := nodeList.ApplyHighlight(matchNodes); err != nil {
+			return err
+		}
+		nodeList.FindNextHighlightedNode()
+	}
+	return nil
 }

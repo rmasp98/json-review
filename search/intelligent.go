@@ -1,12 +1,9 @@
 package search
 
-// GetHints stuff
-func GetHints(input string, cursorPos int) string {
-	// starting at cursorPos go back until we find ( or operator
-	// If substring contains quote or condition return nothing
-	//Otherwise strip spaces and return any matching controls
-	return ""
-}
+import (
+	"regexp"
+	"strings"
+)
 
 // Intelligent stuff
 type Intelligent struct {
@@ -24,9 +21,10 @@ func NewIntelligent(input string) (Intelligent, error) {
 }
 
 // Execute stuff
-func (i *Intelligent) Execute(nodeList sNodeList) {
-	filterNodes := i.executeCommands([]int{}, nodeList)
-	nodeList.ApplyFilter(filterNodes)
+func (i *Intelligent) Execute(nodeList sNodeList, fMode FunctionEnum) error {
+	matchedNodes := i.executeCommands([]int{}, nodeList)
+	nodeList.ApplyFilter(matchedNodes)
+	return nil
 }
 
 // GetCommands returns commands (needed for testing)
@@ -56,4 +54,55 @@ func (i *Intelligent) executeCommands(currentIndices []int, nodeList sNodeList) 
 	}
 
 	return nodeIndices
+}
+
+// GetIntelligentHints returns hints for controls
+func GetIntelligentHints(input string, cursorPos int) []string {
+	startIndex, isControl := getInterestingSubstringStart(input[:cursorPos])
+	interestring := strings.Trim(input[startIndex:cursorPos], " ")
+	if isControl {
+		return getControlHints(interestring)
+	}
+	return operators
+}
+
+func getInterestingSubstringStart(input string) (int, bool) {
+	controlStartIndex := getControlSubstringStart(input)
+	operatorStartIndex := getOperatorSubstringStart(input)
+	if controlStartIndex < operatorStartIndex {
+		return operatorStartIndex, false
+	}
+	return controlStartIndex, true
+}
+
+func getControlHints(regex string) []string {
+	var hints []string
+	var altHints []string
+	if r, err := regexp.Compile("(?i)" + regex); err == nil {
+		for _, control := range controls {
+			if r.MatchString(control) {
+				hints = append(hints, control)
+			}
+		}
+	}
+	return append(altHints, hints...)
+}
+
+func getControlSubstringStart(input string) int {
+	highestIndex := strings.LastIndex(input, "(")
+	for _, operator := range operators {
+		if newIndex := strings.LastIndex(input, operator); newIndex > highestIndex {
+			highestIndex = newIndex
+		}
+	}
+	return highestIndex + 1
+}
+
+func getOperatorSubstringStart(input string) int {
+	bracketIndex := strings.LastIndex(input, ")")
+	quoteIndex := strings.LastIndex(input, "\"")
+	if bracketIndex < quoteIndex && strings.Count(input, "\"")%2 == 0 {
+		return quoteIndex + 1
+	}
+	return bracketIndex + 1
 }

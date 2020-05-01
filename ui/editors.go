@@ -2,8 +2,6 @@ package ui
 
 import (
 	"kube-review/jsontree"
-	"os"
-	"time"
 
 	"github.com/jroimartin/gocui"
 )
@@ -91,47 +89,59 @@ func (e *DisplayEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mo
 	}
 }
 
-func saveEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
-	// switch {
-	// case ch != 0 && mod == 0:
-	// 	v.EditWrite(ch)
-	// case key == gocui.KeySpace:
-	// 	v.EditWrite(' ')
-	// case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
-	// 	v.EditDelete(true)
-	// case key == gocui.KeyArrowLeft:
-	// 	v.MoveCursor(-1, 0, false)
-	// case key == gocui.KeyArrowRight:
-	// 	v.MoveCursor(1, 0, false)
-	// case key == gocui.KeyEnter:
-	// 	filename, _ := v.Line(0)
-	// 	err := save(filename)
-	// 	v.Clear()
-	// 	if err != nil {
-	// 		fmt.Fprintf(v, "Failed to write to \"%s\"", filename)
-	// 	} else {
-	// 		fmt.Fprintf(v, "Sucessfully saved to \"%s\"", filename)
-	// 	}
-	// 	go closeSave(v)
-	// }
+// PopupWriteEditor provides an editor that user can write to and run function on enter
+type PopupWriteEditor struct {
+	dialog   string
+	function func(string)
 }
 
-func save(filename string) error {
-	file, openError := os.Create(filename)
-	defer file.Close()
-	if openError != nil {
-		return openError
-	}
-	_, writeError := file.Write([]byte(GetWindow().GetContent(DISPLAY)))
-	if writeError != nil {
-		return writeError
-	}
-	return nil
+// NewPopupWriteEditor creates a new PopupWriteEditor
+func NewPopupWriteEditor(dialog string, function func(string)) *PopupWriteEditor {
+	return &PopupWriteEditor{dialog, function}
 }
 
-func closeSave(v *gocui.View) {
-	time.Sleep(1 * time.Second)
-	GetWindow().ShowSaveView(false)
-	v.Clear()
-	v.SetCursor(0, 0)
+// Edit will allow user to enter information into popup and run function
+func (p *PopupWriteEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
+	switch {
+	case ch != 0 && mod == 0:
+		v.EditWrite(ch)
+	case key == gocui.KeySpace:
+		v.EditWrite(' ')
+	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
+		if x, _ := v.Cursor(); x > 0 {
+			v.EditDelete(true)
+		}
+	case key == gocui.KeyArrowLeft:
+		if x, _ := v.Cursor(); x > 0 {
+			v.MoveCursor(-1, 0, false)
+		}
+	case key == gocui.KeyArrowRight:
+		v.MoveCursor(1, 0, false)
+	case key == gocui.KeyEnter:
+		input, _ := v.Line(1)
+		p.function(input)
+		return
+	}
+	input, _ := v.Line(1)
+	GetWindow().UpdateViewContent(POPUP, p.dialog+input)
+}
+
+// PopupConfirmEditor allows user to confirm or reject something
+type PopupConfirmEditor struct {
+	function func()
+}
+
+// NewPopupConfirmEditor stuff
+func NewPopupConfirmEditor(function func()) *PopupConfirmEditor {
+	return &PopupConfirmEditor{function}
+}
+
+// Edit only allow user to press y or n
+func (p *PopupConfirmEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
+	switch {
+	case ch == 'y':
+		p.function()
+	case ch == 'n':
+		GetWindow().ShowPopupView(false, nil)
+	}
 }

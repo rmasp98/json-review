@@ -82,8 +82,13 @@ func (n NodeList) GetNodes(num int) string {
 
 // GetJSON returns a formatted json string, num lines long for
 // the active node. Fields can be hidden using the Filter function
+// Passing -1 will remove limit on returned lines
 func (n NodeList) GetJSON(num int) string {
 	var finalJSON string
+	if num == -1 {
+		// This should guarentee all json output
+		num = len(n.nodes) * 2
+	}
 	if num > 0 {
 		baseLevel := n.nodes[n.activeNode].Level
 		for index := n.jsonStart; index < len(n.nodes); {

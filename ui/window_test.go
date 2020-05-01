@@ -40,28 +40,6 @@ func TestTooShortForEverything(t *testing.T) {
 	assertEqualDimensions(t, views, zeroDimensions)
 }
 
-func TestCanReturnHeightOfPanel(t *testing.T) {
-	views := ui.GetWindow()
-	views.Resize(100, 100)
-	if views.Height(ui.PANEL) != 94 {
-		t.Errorf("Supposed to return %d but returned %d", 93, views.Height(ui.PANEL))
-	}
-}
-
-func TestCanReturnHeightOfDisplay(t *testing.T) {
-	views := ui.GetWindow()
-	views.Resize(100, 100)
-	if views.Height(ui.DISPLAY) != 91 {
-		t.Errorf("Supposed to return %d but returned %d", 90, views.Height(ui.DISPLAY))
-	}
-}
-
-// func getGoCuiMock(maxX, maxY int) *mocks.GoCui {
-// 	gocuiMock := &mocks.GoCui{}
-// 	gocuiMock.On("Size").Return(maxX, maxY)
-// 	return gocuiMock
-// }
-
 func assertEqualDimensions(t *testing.T, layouts *ui.Window, expected []ui.Dimensions) {
 	for i := 0; i < 4; i++ {
 		if layouts.GetDimensions(ui.ViewEnum(i)) != expected[i] {

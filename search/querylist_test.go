@@ -27,10 +27,10 @@ func TestGetNamesReturnsListInAlphabeticalOrder(t *testing.T) {
 	}
 }
 
-func TestCanGetRegexFromName(t *testing.T) {
+func TestCanGetQueryFromName(t *testing.T) {
 	ql := search.NewQueryList()
 	ql.Load("../testdata/querylist-test.json")
-	actual := ql.GetRegex("test1more")
+	actual, _ := ql.GetQuery("test1more")
 	if actual != "[a-z]{5}" {
 		t.Errorf("Expected '[a-z]{5}' but instead got '%s'", actual)
 	}
@@ -48,7 +48,7 @@ func TestCanGetDescriptionFromName(t *testing.T) {
 func TestCanAddToList(t *testing.T) {
 	ql := search.NewQueryList()
 	ql.Add("test3", "TestRegex", "Third test")
-	actual := ql.GetRegex("test3")
+	actual, _ := ql.GetQuery("test3")
 	if actual != "TestRegex" {
 		t.Errorf("Expected 'TestRegex' but instead got '%s'", actual)
 	}
@@ -58,7 +58,7 @@ func TestCanRemoveFromTheList(t *testing.T) {
 	ql := search.NewQueryList()
 	ql.Load("../testdata/querylist-test.json")
 	ql.Remove("test1more")
-	actual := ql.GetRegex("test1more")
+	actual, _ := ql.GetQuery("test1more")
 	if actual != "" {
 		t.Errorf("Expected empty string but instead got '%s'", actual)
 	}

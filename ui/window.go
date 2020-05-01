@@ -14,8 +14,7 @@ type Window struct {
 	panelRelativeWidth float32
 	border             int
 	tbBaseBuffer       int
-	saveVisible        bool
-	height             int
+	popupVisible       bool
 }
 
 var (
@@ -32,20 +31,19 @@ func GetWindow() *Window {
 			SEARCH:  Layout{MinSize{1, 2}, Dimensions{0, 0, 0, 0}, "", nil},
 			DISPLAY: Layout{MinSize{1, 1}, Dimensions{0, 0, 0, 0}, "", nil},
 			HELP:    Layout{MinSize{1, 2}, Dimensions{0, 0, 0, 0}, helpBase, nil},
-			POPUP:   Layout{MinSize{1, 1}, Dimensions{50, 30, 100, 32}, "", nil}},
-			0.2, 1, 3, false, 0}
+			POPUP:   Layout{MinSize{1, 1}, Dimensions{0, 0, 0, 0}, "", nil}},
+			0.2, 1, 3, false}
 	})
 	return &instance
 }
 
-// ShowSaveView a
-func (w *Window) ShowSaveView(visible bool) {
-	w.saveVisible = visible
-}
-
-// Height returns height of view for use in GetNodes and GetJson
-func (w Window) Height(view ViewEnum) int {
-	return w.GetDimensions(view).Y1 - w.GetDimensions(view).Y0 - 1
+// ShowPopupView a
+func (w *Window) ShowPopupView(visible bool, editor gocui.Editor) {
+	w.popupVisible = visible
+	if visible {
+		w.UpdateEditor(POPUP, editor)
+		w.updateViewDimensions(POPUP, Dimensions{25, 30, 100, 34})
+	}
 }
 
 // GetDimensions gets the dimensions for a given view
@@ -60,7 +58,6 @@ func (w Window) GetContent(view ViewEnum) string {
 
 // Resize updates views based on the current window size
 func (w *Window) Resize(maxX, maxY int) {
-	w.height = maxY
 	tbBuffer := w.tbBaseBuffer
 	if maxY < 4*tbBuffer || maxX < w.views[SEARCH].min.width+2*w.border {
 		tbBuffer = 0
@@ -80,10 +77,6 @@ func (w *Window) Resize(maxX, maxY int) {
 		w.updateViewDimensions(PANEL, Dimensions{0, 0, 0, 0})
 	}
 	if tbBuffer != 0 {
-		// w.updateViewDimensions(SEARCH, Dimensions{
-		// 	w.border + panelWidth, w.border,
-		// 	maxX - w.border, tbBuffer,
-		// })
 		w.updateViewDimensions(SEARCH, Dimensions{
 			w.border + panelWidth, w.border,
 			maxX - w.border, tbBuffer + strings.Count(w.views[SEARCH].content, "\n"),
@@ -133,11 +126,10 @@ func (w Window) SetViews(gui GoCui) error {
 			}
 		}
 	}
-	if !w.saveVisible {
-		gui.SetViewOnBottom(POPUP.String())
-	} else {
+	if w.popupVisible {
 		gui.SetCurrentView(POPUP.String())
-		gui.SetViewOnTop(POPUP.String())
+	} else {
+		gui.DeleteView(POPUP.String())
 	}
 	return nil
 }

@@ -18,7 +18,11 @@ func basicEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
 		v.EditDelete(true)
 	case key == gocui.KeyDelete:
-		v.EditDelete(false)
+		cursorPos, _ := v.Cursor()
+		line, _ := v.Line(0)
+		if cursorPos != len(line) {
+			v.EditDelete(false)
+		}
 	case key == gocui.KeyArrowLeft:
 		v.MoveCursor(-1, 0, false)
 	case key == gocui.KeyArrowRight:
@@ -32,24 +36,28 @@ func basicEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	case key == gocui.KeyEnd:
 		line, _ := v.Line(0)
 		v.SetCursor(len(line), 0)
+		// case key == gocui.KeyInsert: // Removed because not easy to display
+		// 	v.Overwrite = !v.Overwrite
 	}
 }
 
 // SearchEditor stuff
 type SearchEditor struct {
-	s        search.Search
-	nodeList *jsontree.NodeList
+	s               search.Search
+	nodeList        *jsontree.NodeList
+	searchCursorPos int
 }
 
 // NewSearchEditor stuff
 func NewSearchEditor(nodeList *jsontree.NodeList) *SearchEditor {
-	return &SearchEditor{search.NewSearch(search.REGEX, "querylist.json"), nodeList}
+	return &SearchEditor{search.NewSearch(search.REGEX, "querylist.json"), nodeList, 0}
 }
 
 // Edit stuff
 func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	updateTitle(v, &e.s)
 	if _, lineNum := v.Cursor(); lineNum == 0 {
+		e.searchCursorPos, _ = v.Cursor()
 		basicEditor(v, key, ch, mod)
 	} else {
 		switch {
@@ -59,20 +67,22 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 			v.MoveCursor(0, 1, false)
 		case key == gocui.KeyEnter:
 			input, _ := v.Line(0)
-			name := e.s.GetQueryName(input, lineNum-1)
-			v.Clear()
-			v.Write([]byte(name))
-			v.SetCursor(len(name), 0)
+			searchLine, newCursorPos := e.s.InsertSelectedHint(input, e.searchCursorPos, lineNum-1)
+			GetWindow().UpdateViewContent(SEARCH, searchLine)
+			v.SetCursor(newCursorPos, 0)
+			v.Highlight = false
+			return
 		}
 	}
 
 	if key == gocui.KeyEnter {
 		input, _ := v.Line(0)
 		if err := e.s.Execute(input, e.nodeList); err != nil {
-			input, _ := v.Line(0)
 			GetWindow().UpdateViewContent(SEARCH, input+"\n"+err.Error())
 			return
 		}
+		GetWindow().UpdateViewContent(SEARCH, input)
+		return
 	} else if key == gocui.KeyCtrlQ {
 		e.s.ToggleQueryMode()
 		clearInput(v)
@@ -87,9 +97,11 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 		e.nodeList.FindNextHighlightedNode()
 	}
 
-	input, _ := v.Line(0)
-	queryDetails := e.s.GetHints(input)
-	GetWindow().UpdateViewContent(SEARCH, input+queryDetails)
+	if cursorPos, y := v.Cursor(); y == 0 {
+		input, _ := v.Line(0)
+		hints := e.s.GetHints(input, cursorPos)
+		GetWindow().UpdateViewContent(SEARCH, input+hints)
+	}
 
 	_, lineNum := v.Cursor()
 	v.Highlight = lineNum != 0

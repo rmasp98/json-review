@@ -75,6 +75,14 @@ func TestGetJsonReturnsOnlyRequestedNumberOfLines(t *testing.T) {
 	}
 }
 
+func TestGetJsonReturnsUnlimitedLinesIfMinusOne(t *testing.T) {
+	nodeList, _ := jsontree.NewNodeList(fullJson)
+	actual := nodeList.GetJSON(-1)
+	if !compareJSONStrings(actual, fullJson) {
+		t.Errorf(`Expected fullJson but got "%s"`, actual)
+	}
+}
+
 func TestGetJSONReturnsJSONForActiveNode(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	nodeList.SetActiveNode(7)
