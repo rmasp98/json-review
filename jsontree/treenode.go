@@ -31,6 +31,7 @@ type TreeNode struct {
 	Prefix        string
 	Level         int
 	Parent        int
+	Children      []int
 	isExpanded    bool
 	isFiltered    bool
 	IsHighlighted bool
@@ -52,9 +53,18 @@ func (t *TreeNode) Filter(isFiltered bool) {
 }
 
 // GetJSON returns a snippet of json that will be used by NodeList to reconstruct the original JSON
-func (t TreeNode) GetJSON(level int) string {
+func (t TreeNode) GetJSON(full bool) string {
 	if !t.isFiltered {
-		return strings.Repeat(spacing, level) + t.getRawJSON(level)
+		var out string
+		if t.key == "" || t.key[0:2] == "[]" || !full {
+			out = t.value
+		} else {
+			out = strconv.Quote(t.key) + ": " + t.value
+		}
+		if t.IsHighlighted {
+			return "\033[41m" + out + "\033[0m"
+		}
+		return out
 	}
 	return ""
 }
@@ -77,6 +87,14 @@ func (t TreeNode) GetEnding(lastOnLevel bool) string {
 	return ""
 }
 
+// GetCloseBracket stuff
+func (t TreeNode) GetCloseBracket() string {
+	if !t.isFiltered {
+		return brackets[t.value]
+	}
+	return ""
+}
+
 // Clear sets IsFiltered and IsHighlighted flags to false and IsExpanded to true
 func (t *TreeNode) Clear() {
 	t.isFiltered = false
@@ -91,30 +109,17 @@ func (t TreeNode) Match(r *regexp.Regexp, matchType MatchType) bool {
 
 }
 
-func (t TreeNode) getRawJSON(level int) string {
-	var rawJSON string
-	if t.key == "" || t.key[0:2] == "[]" || level == 0 {
-		rawJSON = t.value
-	} else {
-		rawJSON = strconv.Quote(t.key) + ": " + t.value
-	}
-	if t.IsHighlighted {
-		return "\033[41m" + rawJSON + "\033[0m"
-	}
-	return rawJSON
-}
-
 // CreateTreeNodes creates an array of TreeNodes that represents incoming JSON data
 func CreateTreeNodes(data interface{}, level int) ([]TreeNode, error) {
 	switch elem := data.(type) {
 	case string:
-		return []TreeNode{TreeNode{"", strconv.Quote(elem), "", level, 0, true, false, false}}, nil
+		return []TreeNode{TreeNode{"", strconv.Quote(elem), "", level, 0, []int{}, true, false, false}}, nil
 	case float64:
-		return []TreeNode{TreeNode{"", strconv.FormatFloat(elem, 'g', -1, 64), "", level, 0, true, false, false}}, nil
+		return []TreeNode{TreeNode{"", strconv.FormatFloat(elem, 'g', -1, 64), "", level, 0, []int{}, true, false, false}}, nil
 	case bool:
-		return []TreeNode{TreeNode{"", strconv.FormatBool(elem), "", level, 0, true, false, false}}, nil
+		return []TreeNode{TreeNode{"", strconv.FormatBool(elem), "", level, 0, []int{}, true, false, false}}, nil
 	case nil:
-		return []TreeNode{TreeNode{"", "null", "", level, 0, true, false, false}}, nil
+		return []TreeNode{TreeNode{"", "null", "", level, 0, []int{}, true, false, false}}, nil
 	case map[string]interface{}:
 		return newMapNode(elem, level)
 	case []interface{}:
@@ -155,7 +160,7 @@ func processNode(key string, childInterface interface{}, level int) ([]TreeNode,
 	}
 
 	value := getNodeValue(childNodes)
-	nodes = append(nodes, TreeNode{key, value, "", level, 0, true, false, false})
+	nodes = append(nodes, TreeNode{key, value, "", level, 0, []int{}, true, false, false})
 	if value == "{" || value == "[" {
 		nodes = append(nodes, childNodes...)
 	}

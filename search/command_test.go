@@ -1,10 +1,13 @@
 package search_test
 
 import (
+	"io/ioutil"
 	"kube-review/jsontree"
 	"kube-review/mocks"
 	"kube-review/search"
 	"reflect"
+	"regexp"
+	"sort"
 	"testing"
 )
 
@@ -136,8 +139,10 @@ func TestConditionalRunsWithRegexInCommand(t *testing.T) {
 		mock := mocks.NodeListMock{}
 		cmd := search.Command{fd.name, true, fd.regex, "", ""}
 		cmd.RunConitional([]int{1}, &mock)
-		if mock.Args[0][fd.regexIndex] != fd.regex {
-			t.Errorf("Expected '%s' but got '%s'", fd.regex, mock.Args[0][fd.regexIndex])
+		expected := fd.regex
+		actual := mock.Args[0][fd.regexIndex].(*regexp.Regexp)
+		if actual.String() != expected {
+			t.Errorf("Expected '%v' but got '%v'", expected, actual.String())
 		}
 	}
 }
@@ -169,8 +174,11 @@ func TestConditionalPassesArrayToDependantFunctions(t *testing.T) {
 		mock := mocks.NodeListMock{}
 		cmd := search.Command{fd.name, true, fd.regex, "", ""}
 		cmd.RunConitional([]int{5, 10}, &mock)
-		if mock.Args[0][0] != 5 || mock.Args[1][0] != 10 {
-			t.Errorf("Expected '5' and '10' but got '%d' and '%d'", mock.Args[0][0], mock.Args[1][0])
+		expected := []int{5, 10}
+		actual := []int{mock.Args[0][0].(int), mock.Args[1][0].(int)}
+		sort.Ints(actual)
+		if actual[0] != expected[0] || actual[1] != expected[1] {
+			t.Errorf("Expected '%v' but got '%v'", expected, actual)
 		}
 	}
 }
@@ -203,5 +211,20 @@ func TestComplexCommandReturnsExpectedNodeIndices(t *testing.T) {
 	expected := []int{1, 6, 1, 6}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	}
+}
+
+func BenchmarkParentHasChild(b *testing.B) {
+	rawJSON, _ := ioutil.ReadFile("../testdata/test.json")
+	// rawJSON, _ := ioutil.ReadFile("/mnt/share/workspace/Projects/Old/CUMN-003/k8s/dev_all.json")
+	nodeList, _ := jsontree.NewNodeList(string(rawJSON))
+	command := search.Command{"ParentHasChildAny", true, "[a-z]{3}", "", ""}
+	var indices = make([]int, 1000)
+	for i := 0; i < 1000; i++ {
+		indices[i] = i
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		command.RunConitional(indices, &nodeList)
 	}
 }

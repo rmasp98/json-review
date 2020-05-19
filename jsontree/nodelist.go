@@ -28,12 +28,20 @@ func NewNodeList(jsonData string) (NodeList, error) {
 		return NodeList{}, err
 	}
 
-	nodes := []TreeNode{TreeNode{"Root", getNodeValue(treeNodes), "", 0, 0, true, false, false}}
+	nodes := []TreeNode{TreeNode{"Root", getNodeValue(treeNodes), "", 0, 0, []int{}, true, false, false}}
 	nodes = append(nodes, treeNodes...)
 	nodeList := NodeList{nodes, 0, 0, 0, -1}
 	for index := range nodeList.nodes {
-		nodeList.nodes[index].Parent = nodeList.getParentIndex(index)
-		nodeList.updatePrefix(index)
+		if index != 0 {
+			parentIndex := nodeList.getParentIndex(index)
+			nodeList.nodes[index].Parent = parentIndex
+			nodeList.nodes[parentIndex].Children = append(nodeList.nodes[parentIndex].Children, index)
+		}
+	}
+	for index := range nodeList.nodes {
+		if index != 0 {
+			nodeList.updatePrefix(index)
+		}
 	}
 	return nodeList, nil
 }
@@ -84,31 +92,7 @@ func (n NodeList) GetNodes(num int) string {
 // the active node. Fields can be hidden using the Filter function
 // Passing -1 will remove limit on returned lines
 func (n NodeList) GetJSON(num int) string {
-	var finalJSON string
-	if num == -1 {
-		// This should guarentee all json output
-		num = len(n.nodes) * 2
-	}
-	if num > 0 {
-		baseLevel := n.nodes[n.activeNode].Level
-		for index := n.jsonStart; index < len(n.nodes); {
-			levelDiff := n.nodes[index].Level - baseLevel
-			if nodeJSON := n.nodes[index].GetJSON(levelDiff); nodeJSON != "" {
-				finalJSON += "\n" + nodeJSON
-				num--
-			}
-			finalJSON += n.getNodeEndings(index, baseLevel)
-
-			if num > 0 && index == len(n.nodes)-1 {
-				finalJSON += "\n" + brackets[n.nodes[0].value]
-			}
-			index++
-			if num <= 0 || (index < len(n.nodes) && n.nodes[index].Level <= baseLevel) {
-				break
-			}
-		}
-	}
-	return strings.Trim(finalJSON, "\n")
+	return n.getJSON(n.activeNode, 0, &num)
 }
 
 // MoveTopNode changes the start position (topNode) of what GetNodes returns
@@ -143,7 +127,12 @@ func (n *NodeList) MoveJSONPosition(offset int) {
 	if newPosition < n.activeNode {
 		n.jsonStart = n.activeNode
 	} else {
-		n.jsonStart = newPosition
+		lastChild := n.getLastChild(n.activeNode)
+		if newPosition > n.getLastChild(n.activeNode) {
+			n.jsonStart = lastChild
+		} else {
+			n.jsonStart = newPosition
+		}
 	}
 }
 
@@ -173,11 +162,10 @@ func (n *NodeList) CollapseActiveNode() int {
 }
 
 // GetNodesMatching return node indicies matching regex in matchType
-func (n NodeList) GetNodesMatching(regex string, matchType MatchType, equal bool) []int {
+func (n NodeList) GetNodesMatching(regex *regexp.Regexp, matchType MatchType, equal bool) []int {
 	var matchList []int
-	r, _ := regexp.Compile(regex)
 	for index, node := range n.nodes {
-		if node.Match(r, matchType) == equal {
+		if node.Match(regex, matchType) == equal {
 			matchList = append(matchList, index)
 		}
 	}
@@ -185,21 +173,26 @@ func (n NodeList) GetNodesMatching(regex string, matchType MatchType, equal bool
 }
 
 // GetChildrenMatching stuff
-func (n NodeList) GetChildrenMatching(nodeIndex int, regex string, matchType MatchType, equal bool, recursive bool) []int {
-	var matchList []int
-	r, _ := regexp.Compile(regex)
-	for index := nodeIndex + 1; index <= n.getLevelEndIndex(nodeIndex+1); index++ {
-		if recursive || n.nodes[index].Level == n.nodes[nodeIndex+1].Level {
-			if n.nodes[index].Match(r, matchType) {
-				matchList = append(matchList, index)
+func (n NodeList) GetChildrenMatching(nodeIndex int, regex *regexp.Regexp, matchType MatchType, equal bool, recursive bool) []int {
+	var matchList = make([]int, len(n.nodes))
+	var matchIndex = 0
+	for _, index := range n.nodes[nodeIndex].Children {
+		if n.nodes[index].Match(regex, matchType) == equal {
+			matchList[matchIndex] = index
+			matchIndex++
+		}
+		if recursive {
+			for _, childIndex := range n.GetChildrenMatching(index, regex, matchType, equal, recursive) {
+				matchList[matchIndex] = childIndex
+				matchIndex++
 			}
 		}
 	}
-	return matchList
+	return matchList[:matchIndex]
 }
 
 // GetParentChildrenMatching stuff
-func (n NodeList) GetParentChildrenMatching(nodeIndex int, regex string, matchType MatchType, equal bool, recursive bool) []int {
+func (n NodeList) GetParentChildrenMatching(nodeIndex int, regex *regexp.Regexp, matchType MatchType, equal bool, recursive bool) []int {
 	var matchList []int
 	for index := n.nodes[nodeIndex].Parent; ; index = n.nodes[index].Parent {
 		matchList = append(matchList, n.GetChildrenMatching(index, regex, matchType, equal, false)...)
@@ -277,6 +270,38 @@ func (n NodeList) getParentIndex(nodeIndex int) int {
 	return 0
 }
 
+func (n NodeList) getJSON(nodeIndex, level int, num *int) string {
+	if *num != 0 {
+		var finalJSON string
+		JSON := n.nodes[nodeIndex].GetJSON(level > 0)
+		if JSON != "" && nodeIndex >= n.jsonStart {
+			finalJSON = strings.Repeat(spacing, level) + JSON
+			*num--
+		}
+		for pos, childIndex := range n.nodes[nodeIndex].Children {
+			childJSON := n.getJSON(childIndex, level+1, num)
+			if childJSON != "" {
+				if finalJSON == "" {
+					finalJSON += childJSON
+				} else {
+					finalJSON += "\n" + childJSON
+					if pos < len(n.nodes[nodeIndex].Children)-1 {
+						finalJSON += ","
+					}
+				}
+			}
+		}
+		closeBracket := n.nodes[nodeIndex].GetCloseBracket()
+
+		if closeBracket != "" && *num != 0 && n.getLastChild(nodeIndex) >= n.jsonStart {
+			finalJSON += "\n" + strings.Repeat(spacing, level) + closeBracket
+			*num--
+		}
+		return finalJSON
+	}
+	return ""
+}
+
 // Get the last index in the current level including any children
 func (n NodeList) getLevelEndIndex(nodeIndex int) int {
 	currentLevel := n.nodes[nodeIndex].Level
@@ -288,13 +313,12 @@ func (n NodeList) getLevelEndIndex(nodeIndex int) int {
 	return len(n.nodes) - 1
 }
 
-// TODO: Move to treeNode suppling parent prefix and bool isLastOnLevel
-
 func (n *NodeList) updatePrefix(index int) {
 	if index > 0 {
-		newPrefix := convertParentPrefix(n.nodes[n.nodes[index].Parent].Prefix)
+		parentIndex := n.nodes[index].Parent
+		newPrefix := convertParentPrefix(n.nodes[parentIndex].Prefix)
 
-		if n.isLastOnLevel(index) {
+		if n.isLastInLevel(index, parentIndex) {
 			newPrefix += "└──"
 		} else {
 			newPrefix += "├──"
@@ -302,6 +326,19 @@ func (n *NodeList) updatePrefix(index int) {
 
 		n.nodes[index].Prefix = newPrefix
 	}
+}
+
+func (n NodeList) isLastInLevel(nodeIndex, parentIndex int) bool {
+	siblings := n.nodes[parentIndex].Children
+	for i := len(siblings) - 1; i >= 0; i-- {
+		if !n.nodes[siblings[i]].isFiltered {
+			if siblings[i] == nodeIndex {
+				return true
+			}
+			return false
+		}
+	}
+	return false
 }
 
 var prefixConvert = map[rune]rune{
@@ -318,51 +355,6 @@ func convertParentPrefix(prefix string) string {
 		output += string(prefixConvert[char])
 	}
 	return output
-}
-
-func (n NodeList) isLastOnLevel(currentIndex int) bool {
-	if currentIndex == len(n.nodes)-1 {
-		return true
-	}
-	targetLevel := n.nodes[currentIndex].Level
-	for index := currentIndex + 1; index < len(n.nodes); index++ {
-		nodeLevel := n.nodes[index].Level
-		if nodeLevel == targetLevel && n.nodes[index].IsVisible() {
-			return false
-		} else if nodeLevel < targetLevel {
-			return true
-		}
-	}
-	return true
-}
-
-// getNodeEndings returns any closed brackets or commas required after nodeIndex
-func (n NodeList) getNodeEndings(nodeIndex, baseLevel int) string {
-	var endings string
-	if nodeIndex+1 < len(n.nodes) {
-		currentLevel := n.nodes[nodeIndex].Level
-		nextLevel := n.nodes[nodeIndex+1].Level
-		if nextLevel <= currentLevel {
-			endings = n.nodes[nodeIndex].GetEnding(n.isLastOnLevel(nodeIndex))
-		}
-		for level := currentLevel; level > nextLevel && level > baseLevel; level-- {
-			levelParent := n.getLevelParent(nodeIndex, level)
-			nodeEnding := n.nodes[levelParent].GetEnding(n.isLastOnLevel(levelParent))
-			if nodeEnding != "" {
-				endings += "\n" + strings.Repeat(spacing, level-baseLevel-1) + nodeEnding
-			}
-		}
-	}
-	return endings
-}
-
-func (n NodeList) getLevelParent(nodeIndex, level int) int {
-	for index := nodeIndex; index > 0; index-- {
-		if n.nodes[index].Level == level-1 {
-			return index
-		}
-	}
-	return 0
 }
 
 //Sorry for the name...
@@ -392,6 +384,16 @@ func (n NodeList) getVisibleIndex(nodeIndex int) int {
 		}
 	}
 	return visibleIndex
+}
+
+func (n NodeList) getLastChild(nodeIndex int) int {
+	children := n.nodes[nodeIndex].Children
+	lastIndex := nodeIndex
+	for len(children) > 0 {
+		lastIndex = children[len(children)-1]
+		children = n.nodes[lastIndex].Children
+	}
+	return lastIndex
 }
 
 func getDirectionAndAbs(offset int) (int, int) {

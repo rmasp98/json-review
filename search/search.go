@@ -115,7 +115,11 @@ func (s Search) getPossibleHints(input string, cursorPos int) []string {
 }
 
 func (s Search) executeRegex(regex string, nodeList sNodeList) error {
-	matchNodes := nodeList.GetNodesMatching(regex, jsontree.ANY, true)
+	r, err := regexp.Compile(regex)
+	if err != nil {
+		return err
+	}
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	if s.functionMode == FILTER {
 		return nodeList.ApplyFilter(matchNodes)
 	} else if s.functionMode == FIND {

@@ -19,6 +19,5 @@ func init() {
 
 func interactiveRun(cmd *cobra.Command, args []string) {
 	nodeList := getConfig()
-	cui := ui.NewCursesUI(nodeList)
-	cui.Run()
+	ui.Run(nodeList)
 }

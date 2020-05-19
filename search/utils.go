@@ -1,6 +1,9 @@
 package search
 
-import "kube-review/jsontree"
+import (
+	"kube-review/jsontree"
+	"regexp"
+)
 
 // FunctionEnum list the possible views available
 type FunctionEnum int
@@ -33,9 +36,9 @@ func (qe QueryEnum) String() string {
 }
 
 type sNodeList interface {
-	GetNodesMatching(regex string, matchType jsontree.MatchType, equal bool) []int
-	GetChildrenMatching(nodeIndex int, regex string, matchType jsontree.MatchType, equal bool, recursive bool) []int
-	GetParentChildrenMatching(nodeIndex int, regex string, matchType jsontree.MatchType, equal bool, recursive bool) []int
+	GetNodesMatching(regex *regexp.Regexp, matchType jsontree.MatchType, equal bool) []int
+	GetChildrenMatching(nodeIndex int, regex *regexp.Regexp, matchType jsontree.MatchType, equal bool, recursive bool) []int
+	GetParentChildrenMatching(nodeIndex int, regex *regexp.Regexp, matchType jsontree.MatchType, equal bool, recursive bool) []int
 	ApplyFilter(nodes []int) error
 	ApplyHighlight(nodes []int) error
 	FindNextHighlightedNode() error

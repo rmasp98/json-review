@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"kube-review/jsontree"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -86,8 +87,8 @@ func TestGetJsonReturnsUnlimitedLinesIfMinusOne(t *testing.T) {
 func TestGetJSONReturnsJSONForActiveNode(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	nodeList.SetActiveNode(7)
-	actual := nodeList.GetJSON(3)
-	expected := "[\n   \"GML\",\n   \"XML\"\n],"
+	actual := nodeList.GetJSON(4)
+	expected := "[\n   \"GML\",\n   \"XML\"\n]"
 	if actual != expected {
 		t.Errorf("Expected out:\n'%s'\n\nActual output:\n%s",
 			expected, actual,
@@ -148,9 +149,9 @@ func TestEnsureActiveNodeIsRelativeToTopNode(t *testing.T) {
 	nodeList.MoveTopNode(2)
 	nodeList.SetActiveNode(2)
 	actual := nodeList.GetJSON(1)
-	if actual != `"ISO 8879:1986",` {
+	if actual != `"ISO 8879:1986"` {
 		t.Errorf("Expected out:\n'%s'\nActual output:\n'%s'",
-			`"ISO 8879:1986",`, actual,
+			`"ISO 8879:1986"`, actual,
 		)
 	}
 }
@@ -219,7 +220,8 @@ func TestCollapseActiveNodeMovesTopNodeIfRequired(t *testing.T) {
 
 func TestSearchWithNoMatchesReturnsSizeOne(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("I will not match", jsontree.ANY, true)
+	r := regexp.MustCompile("I will not match")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyFilter(matchNodes)
 	actual := nodeList.Size()
 	if actual != 1 {
@@ -229,7 +231,8 @@ func TestSearchWithNoMatchesReturnsSizeOne(t *testing.T) {
 
 func TestSearchShowsNodeWithMatchInNode(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("[a-zA-Z]{5}", jsontree.ANY, true)
+	r := regexp.MustCompile("[a-zA-Z]{5}")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyFilter(matchNodes)
 	nodeList.MoveTopNode(1)
 	actual := nodeList.GetNodes(1)
@@ -240,7 +243,8 @@ func TestSearchShowsNodeWithMatchInNode(t *testing.T) {
 
 func TestSearchShowsNodeWithMatchInDirectChildren(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("title", jsontree.ANY, true)
+	r := regexp.MustCompile("title")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyFilter(matchNodes)
 	nodeList.MoveTopNode(1)
 	actual := nodeList.GetNodes(1)
@@ -251,7 +255,8 @@ func TestSearchShowsNodeWithMatchInDirectChildren(t *testing.T) {
 
 func TestSearchShowsNodeWithMatchInAnyChildren(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("XML", jsontree.ANY, true)
+	r := regexp.MustCompile("XML")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyFilter(matchNodes)
 	nodeList.MoveTopNode(1)
 	actual := nodeList.GetNodes(1)
@@ -262,7 +267,8 @@ func TestSearchShowsNodeWithMatchInAnyChildren(t *testing.T) {
 
 func TestSearchShowEmptyJSONWithNoMatches(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("I will not match", jsontree.ANY, true)
+	r := regexp.MustCompile("I will not match")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyFilter(matchNodes)
 	actual := nodeList.GetJSON(23)
 	if actual != "{\n}" {
@@ -274,7 +280,7 @@ func TestGetJsonCanReturnOffsetJson(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	nodeList.MoveJSONPosition(5)
 	actual := nodeList.GetJSON(1)
-	expected := "            \"Acronym\": \"SGML\","
+	expected := "            \"Acronym\": \"SGML\""
 	if actual != expected {
 		t.Errorf("Expected '%s' nodes but got '%s'", expected, actual)
 	}
@@ -285,7 +291,8 @@ var reset = "\033[0m"
 
 func TestApplyHighlightsSetsIsHighlightedForListedNode(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("GlossDiv", jsontree.ANY, true)
+	r := regexp.MustCompile("GlossDiv")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyHighlight(matchNodes)
 	nodeList.MoveJSONPosition(1)
 	actual := nodeList.GetJSON(1)
@@ -297,11 +304,12 @@ func TestApplyHighlightsSetsIsHighlightedForListedNode(t *testing.T) {
 
 func TestFindNextMovesToNextHighlightedNode(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("GML", jsontree.ANY, true)
+	r := regexp.MustCompile("GML")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyHighlight(matchNodes)
 	nodeList.FindNextHighlightedNode()
 	actual := nodeList.GetJSON(1)
-	expected := strings.Repeat("   ", 4) + hl + "\"Acronym\": \"SGML\"" + reset + ","
+	expected := strings.Repeat("   ", 4) + hl + "\"Acronym\": \"SGML\"" + reset
 	if actual != expected {
 		t.Errorf("Expected '%s' but got '%s'", expected, actual)
 	}
@@ -309,12 +317,13 @@ func TestFindNextMovesToNextHighlightedNode(t *testing.T) {
 
 func TestFindDoesNotMatchSameTwice(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("GML", jsontree.ANY, true)
+	r := regexp.MustCompile("GML")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyHighlight(matchNodes)
 	nodeList.FindNextHighlightedNode()
 	nodeList.FindNextHighlightedNode()
 	actual := nodeList.GetJSON(1)
-	expected := strings.Repeat("   ", 6) + hl + "\"GML\"" + reset + ","
+	expected := strings.Repeat("   ", 6) + hl + "\"GML\"" + reset
 	if actual != expected {
 		t.Errorf("Expected '%s' but got '%s'", expected, actual)
 	}
@@ -322,12 +331,13 @@ func TestFindDoesNotMatchSameTwice(t *testing.T) {
 
 func TestFindNextChecksRelativeToCurrentPosition(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("GML", jsontree.ANY, true)
+	r := regexp.MustCompile("GML")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyHighlight(matchNodes)
 	nodeList.MoveJSONPosition(6)
 	nodeList.FindNextHighlightedNode()
 	actual := nodeList.GetJSON(1)
-	expected := strings.Repeat("   ", 6) + hl + "\"GML\"" + reset + ","
+	expected := strings.Repeat("   ", 6) + hl + "\"GML\"" + reset
 	if actual != expected {
 		t.Errorf("Expected '%s' but got '%s'", expected, actual)
 	}
@@ -335,7 +345,8 @@ func TestFindNextChecksRelativeToCurrentPosition(t *testing.T) {
 
 func TestFindNextChecksOnlyInActiveNode(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("title", jsontree.ANY, true)
+	r := regexp.MustCompile("title")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyHighlight(matchNodes)
 	nodeList.SetActiveNode(3)
 	actual := nodeList.FindNextHighlightedNode()
@@ -346,12 +357,13 @@ func TestFindNextChecksOnlyInActiveNode(t *testing.T) {
 
 func TestFindWrapsToBeginnigIfCannotFind(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("GML", jsontree.ANY, true)
+	r := regexp.MustCompile("GML")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.MoveJSONPosition(16)
 	nodeList.ApplyHighlight(matchNodes)
 	nodeList.FindNextHighlightedNode()
 	actual := nodeList.GetJSON(1)
-	expected := strings.Repeat("   ", 4) + hl + "\"Acronym\": \"SGML\"" + reset + ","
+	expected := strings.Repeat("   ", 4) + hl + "\"Acronym\": \"SGML\"" + reset
 	if actual != expected {
 		t.Errorf("Expected '%s' but got '%s'", expected, actual)
 	}
@@ -359,7 +371,8 @@ func TestFindWrapsToBeginnigIfCannotFind(t *testing.T) {
 
 func TestClearResetsAnyEffectOfFilter(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
-	matchNodes := nodeList.GetNodesMatching("markup", jsontree.ANY, true)
+	r := regexp.MustCompile("markup")
+	matchNodes := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	nodeList.ApplyFilter(matchNodes)
 	nodeList.Clear()
 	actual := nodeList.GetNodes(17)
@@ -371,7 +384,8 @@ func TestClearResetsAnyEffectOfFilter(t *testing.T) {
 func TestCanReturnListOfMatchingNodes(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	expected := []int{15, 16}
-	actual := nodeList.GetNodesMatching("title", jsontree.ANY, true)
+	r := regexp.MustCompile("title")
+	actual := nodeList.GetNodesMatching(r, jsontree.ANY, true)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
 	}
@@ -380,7 +394,8 @@ func TestCanReturnListOfMatchingNodes(t *testing.T) {
 func TestCanReturnListofNonMatchingNodes(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	expected := []int{0, 4, 5, 8, 9, 10, 13, 14, 15, 16}
-	actual := nodeList.GetNodesMatching("Gloss", jsontree.ANY, false)
+	r := regexp.MustCompile("Gloss")
+	actual := nodeList.GetNodesMatching(r, jsontree.ANY, false)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
 	}
@@ -389,7 +404,8 @@ func TestCanReturnListofNonMatchingNodes(t *testing.T) {
 func TestCanFindMatchingChildrenOfANodeNonRecursively(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	expected := []int{2}
-	actual := nodeList.GetChildrenMatching(1, "Gloss", jsontree.ANY, true, false)
+	r := regexp.MustCompile("Gloss")
+	actual := nodeList.GetChildrenMatching(1, r, jsontree.ANY, true, false)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
 	}
@@ -398,7 +414,8 @@ func TestCanFindMatchingChildrenOfANodeNonRecursively(t *testing.T) {
 func TestCanFindMatchingChildrenOfANodeRecursively(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	expected := []int{2, 3, 6, 7, 11, 12}
-	actual := nodeList.GetChildrenMatching(1, "Gloss", jsontree.ANY, true, true)
+	r := regexp.MustCompile("Gloss")
+	actual := nodeList.GetChildrenMatching(1, r, jsontree.ANY, true, true)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
 	}
@@ -407,7 +424,8 @@ func TestCanFindMatchingChildrenOfANodeRecursively(t *testing.T) {
 func TestCanFindMatchingChildrenInParent(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	expected := []int{15}
-	actual := nodeList.GetParentChildrenMatching(2, "title", jsontree.ANY, true, false)
+	r := regexp.MustCompile("title")
+	actual := nodeList.GetParentChildrenMatching(2, r, jsontree.ANY, true, false)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
 	}
@@ -416,7 +434,8 @@ func TestCanFindMatchingChildrenInParent(t *testing.T) {
 func TestCanFindMatchingChildrenInRecursiveParents(t *testing.T) {
 	nodeList, _ := jsontree.NewNodeList(fullJson)
 	expected := []int{15, 16}
-	actual := nodeList.GetParentChildrenMatching(2, "title", jsontree.ANY, true, true)
+	r := regexp.MustCompile("title")
+	actual := nodeList.GetParentChildrenMatching(2, r, jsontree.ANY, true, true)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected out:\n%v\n\nActual output:\n%v", expected, actual)
 	}

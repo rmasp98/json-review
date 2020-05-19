@@ -3,6 +3,7 @@ package search
 import (
 	"kube-review/jsontree"
 	"regexp"
+	"sync"
 )
 
 // Command contains data for running an intelligent command
@@ -18,19 +19,20 @@ type Command struct {
 
 // RunConitional stuff
 func (c Command) RunConitional(indices []int, nodeList sNodeList) []int {
-	var outIndices []int
-	if matched, _ := regexp.MatchString("ParentHasChild", c.Control); matched {
-		for _, index := range indices {
-			outIndices = append(outIndices, nodeList.GetParentChildrenMatching(index, c.Regex, getMatchType(c.Control), c.Equal, getRecursion(c.Control))...)
+	if r, err := regexp.Compile(c.Regex); err == nil {
+		if matched, _ := regexp.MatchString("ParentHasChild", c.Control); matched {
+			return runInParallel(indices, func(index int) []int {
+				return nodeList.GetParentChildrenMatching(index, r, getMatchType(c.Control), c.Equal, getRecursion(c.Control))
+			})
+		} else if matched, _ := regexp.MatchString("ChildHas", c.Control); matched {
+			return runInParallel(indices, func(index int) []int {
+				return nodeList.GetChildrenMatching(index, r, getMatchType(c.Control), c.Equal, getRecursion(c.Control))
+			})
+		} else if c.Control != "" {
+			return nodeList.GetNodesMatching(r, getMatchType(c.Control), c.Equal)
 		}
-	} else if matched, _ := regexp.MatchString("ChildHas", c.Control); matched {
-		for _, index := range indices {
-			outIndices = append(outIndices, nodeList.GetChildrenMatching(index, c.Regex, getMatchType(c.Control), c.Equal, getRecursion(c.Control))...)
-		}
-	} else if c.Control != "" {
-		outIndices = nodeList.GetNodesMatching(c.Regex, getMatchType(c.Control), c.Equal)
 	}
-	return outIndices
+	return []int{}
 }
 
 // RunOperation stuff
@@ -116,4 +118,22 @@ func getMatchType(control string) jsontree.MatchType {
 func getRecursion(control string) bool {
 	matched, _ := regexp.MatchString("^Any", control)
 	return matched
+}
+
+func runInParallel(indices []int, function func(int) []int) []int {
+	var outIndices []int
+	var mutex sync.Mutex
+	var wg sync.WaitGroup
+	for _, index := range indices {
+		wg.Add(1)
+		go func(index int) {
+			newIndices := function(index)
+			mutex.Lock()
+			outIndices = append(outIndices, newIndices...)
+			mutex.Unlock()
+			wg.Done()
+		}(index)
+	}
+	wg.Wait()
+	return outIndices
 }

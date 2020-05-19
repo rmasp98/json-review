@@ -1,185 +1,101 @@
 package ui
 
-import (
-	"fmt"
-	"strings"
-	"sync"
-
-	"github.com/jroimartin/gocui"
-)
-
-// Window contains all information for populating the window
+// Window determines size of each view
 type Window struct {
-	views              map[ViewEnum]Layout
-	panelRelativeWidth float32
+	views              map[ViewEnum]layout
+	panelRelativeWidth float64
 	border             int
 	tbBaseBuffer       int
-	popupVisible       bool
 }
 
-var (
-	instance Window
-	once     sync.Once
-	helpBase = "Ctrl+D: Exit  | Tab: Next View | Ctrl+S: Save"
-)
-
-// GetWindow creates new window if note created and returns window
-func GetWindow() *Window {
-	once.Do(func() {
-		instance = Window{map[ViewEnum]Layout{
-			PANEL:   Layout{MinSize{10, 1}, Dimensions{0, 0, 0, 0}, "", nil},
-			SEARCH:  Layout{MinSize{1, 2}, Dimensions{0, 0, 0, 0}, "", nil},
-			DISPLAY: Layout{MinSize{1, 1}, Dimensions{0, 0, 0, 0}, "", nil},
-			HELP:    Layout{MinSize{1, 2}, Dimensions{0, 0, 0, 0}, helpBase, nil},
-			POPUP:   Layout{MinSize{1, 1}, Dimensions{0, 0, 0, 0}, "", nil}},
-			0.2, 1, 3, false}
-	})
-	return &instance
-}
-
-// ShowPopupView a
-func (w *Window) ShowPopupView(visible bool, editor gocui.Editor) {
-	w.popupVisible = visible
-	if visible {
-		w.UpdateEditor(POPUP, editor)
-		w.updateViewDimensions(POPUP, Dimensions{25, 30, 100, 34})
-	}
+// NewWindow stuff
+func NewWindow(panelRelativeWidth float64, border, tbBaseBuffer int) Window {
+	return Window{map[ViewEnum]layout{
+		PANEL:   newLayout(10, 1),
+		DISPLAY: newLayout(1, 1),
+		SEARCH:  newLayout(1, 2),
+		HELP:    newLayout(1, 2),
+	}, panelRelativeWidth, border, tbBaseBuffer}
 }
 
 // GetDimensions gets the dimensions for a given view
-func (w Window) GetDimensions(view ViewEnum) Dimensions {
-	return w.views[view].dim
+func (w Window) GetDimensions(view ViewEnum) (int, int, int, int) {
+	v := w.views[view]
+	return v.x0, v.y0, v.x1, v.y1
 }
 
-// GetContent returns the content of a view
-func (w Window) GetContent(view ViewEnum) string {
-	return w.views[view].content
-}
-
-// Resize updates views based on the current window size
-func (w *Window) Resize(maxX, maxY int) {
+// Resize stuff
+func (w *Window) Resize(maxWidth, maxHeight, searchHeight int) error {
 	tbBuffer := w.tbBaseBuffer
-	if maxY < 4*tbBuffer || maxX < w.views[SEARCH].min.width+2*w.border {
+	if maxHeight < 4*tbBuffer || maxWidth < w.views[SEARCH].minWidth+2*w.border {
 		tbBuffer = 0
 	}
 
-	panelWidth := int(w.panelRelativeWidth * float32(maxX))
-	if panelWidth < w.views[PANEL].min.width || maxY < w.views[SEARCH].min.height+2*w.border {
+	panelWidth := int(w.panelRelativeWidth * float64(maxWidth))
+	if panelWidth < w.views[PANEL].minWidth || maxHeight < w.views[SEARCH].minHeight+2*w.border {
 		panelWidth = 0
 	}
 
 	if panelWidth != 0 {
-		w.updateViewDimensions(PANEL, Dimensions{
+		w.updateViewDimensions(PANEL,
 			w.border, w.border,
-			panelWidth, maxY - tbBuffer - w.border,
-		})
+			panelWidth, maxHeight-tbBuffer-w.border,
+		)
 	} else {
-		w.updateViewDimensions(PANEL, Dimensions{0, 0, 0, 0})
+		w.updateViewDimensions(PANEL, 0, 0, 0, 0)
 	}
 	if tbBuffer != 0 {
-		w.updateViewDimensions(SEARCH, Dimensions{
-			w.border + panelWidth, w.border,
-			maxX - w.border, tbBuffer + strings.Count(w.views[SEARCH].content, "\n"),
-		})
+		w.updateViewDimensions(SEARCH,
+			w.border+panelWidth, w.border,
+			maxWidth-w.border, searchHeight,
+		)
 
-		w.updateViewDimensions(HELP, Dimensions{
-			w.border, maxY - tbBuffer,
-			maxX - w.border, maxY - w.border,
-		})
+		w.updateViewDimensions(HELP,
+			w.border, maxHeight-tbBuffer,
+			maxWidth-w.border, maxHeight-w.border,
+		)
 	} else {
-		w.updateViewDimensions(SEARCH, Dimensions{0, 0, 0, 0})
-		w.updateViewDimensions(HELP, Dimensions{0, 0, 0, 0})
+		w.updateViewDimensions(SEARCH, 0, 0, 0, 0)
+		w.updateViewDimensions(HELP, 0, 0, 0, 0)
 	}
-	if maxX > w.views[DISPLAY].min.width+2*w.border && maxY > w.views[DISPLAY].min.height+2*w.border {
-		w.updateViewDimensions(DISPLAY, Dimensions{
-			w.border + panelWidth, tbBuffer + w.border,
-			maxX - w.border, maxY - tbBuffer - w.border,
-		})
+	if maxWidth > w.views[DISPLAY].minWidth+2*w.border && maxHeight > w.views[DISPLAY].minHeight+2*w.border {
+		w.updateViewDimensions(DISPLAY,
+			w.border+panelWidth, tbBuffer+w.border,
+			maxWidth-w.border, maxHeight-tbBuffer-w.border,
+		)
 	} else {
-		w.updateViewDimensions(DISPLAY, Dimensions{0, 0, 0, 0})
+		w.updateViewDimensions(DISPLAY, 0, 0, 0, 0)
 	}
-}
 
-// SetViews passes all the view information to gocui
-func (w Window) SetViews(gui GoCui) error {
-	for name, view := range w.views {
-		if view.dim != (Dimensions{0, 0, 0, 0}) {
-			if gView, err := gui.SetView(name.String(), view.dim.X0, view.dim.Y0, view.dim.X1, view.dim.Y1); err != gocui.ErrUnknownView {
-				if gView.Title == "" {
-					gView.Title = name.String()
-				}
-				if view.content != "" {
-					gView.Clear()
-					fmt.Fprint(gView, view.content)
-					updateCursorPosition(gView, view.content)
-				}
-				if view.editor != nil {
-					gView.Editable = true
-					gView.Editor = view.editor
-					//Bodge to get good highlighting on panel
-					gView.SelBgColor = gocui.ColorGreen
-					gView.SelFgColor = gocui.ColorBlack
-					if name == PANEL {
-						gView.Highlight = true
-					}
-				}
-			}
-		}
-	}
-	if w.popupVisible {
-		gui.SetCurrentView(POPUP.String())
-	} else {
-		gui.DeleteView(POPUP.String())
-	}
+	// TODO: write tests for these
+	// popupWidth := w.views[POPUP].x1 - w.views[POPUP].x0
+	// popupHeight := w.views[POPUP].y1 - w.views[POPUP].y0
+	// if popupWidth != 0 && popupHeight != 0 && popupWidth < maxWidth && popupHeight < maxHeight {
+	// 	w.updateViewDimensions(POPUP,
+	// 		maxWidth/2-popupWidth/2,
+	// 		maxHeight/2-popupHeight/2,
+	// 		maxWidth/2+popupWidth/2+(popupWidth%2),
+	// 		maxHeight/2+popupHeight/2+(popupHeight%2),
+	// 	)
+	// }
 	return nil
 }
 
-func (w *Window) updateViewDimensions(view ViewEnum, dim Dimensions) {
-	newView := w.views[view]
-	newView.dim = dim
-	w.views[view] = newView
+func (w *Window) updateViewDimensions(view ViewEnum, x0, y0, x1, y1 int) {
+	v := w.views[view]
+	v.x0, v.y0, v.x1, v.y1 = x0, y0, x1, y1
+	w.views[view] = v
 }
 
-// UpdateViewContent updates the content of the view
-func (w *Window) UpdateViewContent(view ViewEnum, content string) {
-	newView := w.views[view]
-	newView.content = content
-	w.views[view] = newView
+func newLayout(minWidth, minHeight int) layout {
+	return layout{minWidth, minHeight, 0, 0, 0, 0}
 }
 
-// UpdateEditor sets the editor of the view
-func (w *Window) UpdateEditor(view ViewEnum, editor gocui.Editor) {
-	newView := w.views[view]
-	newView.editor = editor
-	w.views[view] = newView
-}
-
-func updateCursorPosition(view *gocui.View, content string) {
-	_, yCursor := view.Cursor()
-	_, yOrigin := view.Origin()
-	if strings.Count(content, "\n") < yCursor+yOrigin {
-		view.SetCursor(0, 0)
-		view.SetOrigin(0, strings.Count(content, "\n"))
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////
-// View data
-
-// MinSize defines the smallest size a view can be before it disappears
-type MinSize struct {
-	width, height int
-}
-
-// Dimensions defines the current dimensions of the view
-type Dimensions struct {
-	X0, Y0, X1, Y1 int
-}
-
-// Layout contains size and content information for a view
-type Layout struct {
-	min     MinSize
-	dim     Dimensions
-	content string
-	editor  gocui.Editor
+type layout struct {
+	minWidth  int
+	minHeight int
+	x0        int
+	y0        int
+	x1        int
+	y1        int
 }

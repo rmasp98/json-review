@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"kube-review/jsontree"
+	"regexp"
 )
 
 // NodeListMock creates a mock for NodeList
@@ -11,7 +12,7 @@ type NodeListMock struct {
 }
 
 // GetNodesMatching is a mock function
-func (n *NodeListMock) GetNodesMatching(regex string, matchType jsontree.MatchType, equal bool) []int {
+func (n *NodeListMock) GetNodesMatching(regex *regexp.Regexp, matchType jsontree.MatchType, equal bool) []int {
 	n.Calls = append(n.Calls, "GetNodesMatching")
 	args := make([]interface{}, 3)
 	args[0] = regex
@@ -22,7 +23,7 @@ func (n *NodeListMock) GetNodesMatching(regex string, matchType jsontree.MatchTy
 }
 
 // GetChildrenMatching is a mock function
-func (n *NodeListMock) GetChildrenMatching(nodeIndex int, regex string, matchType jsontree.MatchType, invert bool, allChildren bool) []int {
+func (n *NodeListMock) GetChildrenMatching(nodeIndex int, regex *regexp.Regexp, matchType jsontree.MatchType, invert bool, allChildren bool) []int {
 	n.Calls = append(n.Calls, "GetChildrenMatching")
 	args := make([]interface{}, 5)
 	args[0] = nodeIndex
@@ -35,7 +36,7 @@ func (n *NodeListMock) GetChildrenMatching(nodeIndex int, regex string, matchTyp
 }
 
 // GetParentChildrenMatching is a mock function
-func (n *NodeListMock) GetParentChildrenMatching(nodeIndex int, regex string, matchType jsontree.MatchType, invert bool, allParents bool) []int {
+func (n *NodeListMock) GetParentChildrenMatching(nodeIndex int, regex *regexp.Regexp, matchType jsontree.MatchType, invert bool, allParents bool) []int {
 	n.Calls = append(n.Calls, "GetParentChildrenMatching")
 	args := make([]interface{}, 5)
 	args[0] = nodeIndex
