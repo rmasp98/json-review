@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"kube-review/jsontree"
+	"kube-review/search"
 	"log"
 	"strings"
 
@@ -11,15 +12,16 @@ import (
 
 // CursesUI is the central UI control point
 type CursesUI struct {
-	gui      *gocui.Gui
-	win      Window
-	nodeList *jsontree.NodeList
+	gui       *gocui.Gui
+	win       Window
+	nodeList  *jsontree.NodeList
+	queryList *search.QueryList
 }
 
 var helpBase = "Ctrl+D: Exit  | Tab: Next View | Ctrl+S: Save"
 
 // NewCursesUI stuff
-func NewCursesUI(json *jsontree.NodeList) (CursesUI, error) {
+func NewCursesUI(nodeList *jsontree.NodeList, queryList *search.QueryList) (CursesUI, error) {
 	gui, err := gocui.NewGui(gocui.OutputNormal, true)
 	if err != nil {
 		return CursesUI{}, err
@@ -28,7 +30,7 @@ func NewCursesUI(json *jsontree.NodeList) (CursesUI, error) {
 	gui.SelFgColor = gocui.ColorRed
 	gui.Cursor = true
 
-	cui := CursesUI{gui, NewWindow(0.2, 1, 3), json}
+	cui := CursesUI{gui, NewWindow(0.2, 1, 3), nodeList, queryList}
 
 	cui.gui.SetManagerFunc(cui.update)
 
@@ -40,7 +42,7 @@ func NewCursesUI(json *jsontree.NodeList) (CursesUI, error) {
 	if err := gui.SetKeybinding("", gocui.KeyTab, gocui.ModNone, changeView); err != nil {
 		log.Panicln(err)
 	}
-	if err := gui.SetKeybinding("", gocui.KeyCtrlS, gocui.ModNone, SaveUI); err != nil {
+	if err := gui.SetKeybinding("", gocui.KeyCtrlS, gocui.ModNone, NewSaveUI(nodeList, queryList).Save); err != nil {
 		log.Panicln(err)
 	}
 
@@ -124,7 +126,7 @@ func (cui CursesUI) setViews() error {
 				view.Editable = true
 			case SEARCH:
 				view.Title = "Search: Mode=Regex-Find"
-				view.Editor = NewSearchEditor(cui.nodeList)
+				view.Editor = NewSearchEditor(cui.nodeList, cui.queryList)
 				view.Editable = true
 			case HELP:
 				view.Write([]byte(helpBase))

@@ -2,44 +2,54 @@ package ui
 
 import (
 	"fmt"
+	"kube-review/jsontree"
+	"kube-review/search"
 	"log"
 	"os"
 
 	"github.com/awesome-gocui/gocui"
 )
 
-// Save saves content to file even if file already exists
-func Save(filename string, content string) error {
-	file, errOpen := os.Create(filename)
-	defer file.Close()
-	if errOpen != nil {
-		return errOpen
-	}
-	if _, errWrite := file.Write([]byte(content)); errWrite != nil {
-		return errWrite
-	}
+// SaveUI sets up processes for extracting save information from user
+type SaveUI struct {
+	nodeList  *jsontree.NodeList
+	queryList *search.QueryList
+}
+
+// NewSaveUI stuff
+func NewSaveUI(nodeList *jsontree.NodeList, queryList *search.QueryList) SaveUI {
+	return SaveUI{nodeList, queryList}
+}
+
+// Save stuff
+func (s SaveUI) Save(g *gocui.Gui, v *gocui.View) error {
+	go s.saveProcess()
 	return nil
 }
 
-// SaveUI stuff
-func SaveUI(g *gocui.Gui, v *gocui.View) error {
-	go saveProcess()
-	return nil
-}
-
-func saveProcess() {
+func (s SaveUI) saveProcess() {
 	saveType, errType := getSaveType()
 	if errType != nil {
 		log.Println(errType.Error())
 		return
 	}
+
 	filename, errName := getFilename(saveType)
 	if errName != nil {
 		log.Println(errName.Error())
 		return
 	}
 
-	if err := Save(filename, "Test"); err == nil {
+	var err error
+	if saveType == "Raw" {
+		err = s.nodeList.Save(filename)
+	} else if saveType == "Query" {
+		err = s.queryList.Save(filename)
+	} else {
+		err = fmt.Errorf(saveType + " is not a valid save option")
+	}
+
+	if err == nil {
 		cui.CreatePopup("Save Successful", saveType+" data has been successfully saved to "+filename, NewConfirmPopupEditor(nil), true, false, true)
 	} else {
 		cui.CreatePopup("Save Failed", err.Error(), NewConfirmPopupEditor(nil), true, false, true)
@@ -48,7 +58,7 @@ func saveProcess() {
 
 func getSaveType() (string, error) {
 	var ch = make(chan string)
-	content := "Choose what to save:\nRaw"
+	content := "Choose what to save:\nRaw\nQuery"
 	if err := cui.CreatePopup("Save", content, NewSelectPopupEditor(ch), false, true, true); err != nil {
 		return "", fmt.Errorf("Could not create popup")
 	}

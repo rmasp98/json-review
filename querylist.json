@@ -1,14 +1,17 @@
 {
-    "test1more": {
-        "regex": "[a-z]{5}",
-        "description": "First test"
+    "test-regex": {
+        "query": "[a-z]{5}",
+        "description": "Test query for Regex engine",
+        "queryType": 0
     },
-    "test2less": {
-        "regex":"[0-9]{2}",
-        "description": "Second test"
+    "test-intelligent": {
+        "query":"Any==\"[0-9]{2}\"",
+        "description": "Test query for Intelligent engine",
+        "queryType": 1
     },
-    "amysquery": {
-        "regex":"about",
-        "description": "Amy wanted a query"
+    "Secrets in ConfigMap": {
+        "query": "Value==\"PRIVATE KEY\" + (AnyParentHasChildValue==\"ConfigMap\")",
+        "description": "Looks for secrets stored in ConfigMaps such as private keys",
+        "queryType": 1
     }
 }

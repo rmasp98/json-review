@@ -47,8 +47,8 @@ type SearchEditor struct {
 }
 
 // NewSearchEditor stuff
-func NewSearchEditor(nodeList *jsontree.NodeList) *SearchEditor {
-	return &SearchEditor{search.NewSearch(search.REGEX, "querylist.json"), nodeList, 0}
+func NewSearchEditor(nodeList *jsontree.NodeList, queryList *search.QueryList) *SearchEditor {
+	return &SearchEditor{search.NewSearch(search.REGEX, queryList), nodeList, 0}
 }
 
 // Edit stuff
@@ -137,13 +137,14 @@ func (e *NodesEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modi
 		}
 		e.nodeList.SetActiveNode(newY)
 	case key == gocui.KeyArrowDown:
-		_, oldY := v.Cursor()
 		v.MoveCursor(0, 1, false)
-		_, newY := v.Cursor()
-		if oldY == newY {
+		if _, yOrigin := v.Origin(); yOrigin > 0 {
 			e.nodeList.MoveTopNode(1)
+			v.SetOrigin(0, 0)
 		}
-		e.nodeList.SetActiveNode(newY)
+		_, yCursor := v.Cursor()
+		e.nodeList.SetActiveNode(yCursor)
+
 	case key == gocui.KeyArrowRight:
 		x, y := v.Origin()
 		v.SetOrigin(x+1, y)
@@ -208,7 +209,7 @@ func (s *SelectPopupEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocu
 	case key == gocui.KeyArrowUp:
 		_, cursorY := v.Cursor()
 		_, originY := v.Origin()
-		if originY != 0 && cursorY != 0 {
+		if !(originY == 0 && cursorY == 1) {
 			v.MoveCursor(0, -1, false)
 		}
 	case key == gocui.KeyArrowDown:

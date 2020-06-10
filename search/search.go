@@ -9,14 +9,12 @@ import (
 type Search struct {
 	queryMode    QueryEnum
 	functionMode FunctionEnum
-	ql           QueryList
+	ql           *QueryList
 }
 
 // NewSearch stuff
-func NewSearch(queryMode QueryEnum, qlFile string) Search {
-	ql := NewQueryList()
-	ql.Load(qlFile)
-	return Search{queryMode, FIND, ql}
+func NewSearch(queryMode QueryEnum, queryList *QueryList) Search {
+	return Search{queryMode, FIND, queryList}
 }
 
 // GetHints stuff
@@ -24,7 +22,7 @@ func (s Search) GetHints(input string, cursorPos int) string {
 	output := ""
 	if input != "" {
 		for _, hint := range s.getPossibleHints(input, cursorPos) {
-			output += "\n" + whiteBold + hint
+			output += "\n" + hint
 			if s.queryMode == QUERY {
 				output += " - " + redBold + s.ql.GetDescription(hint)
 			}
@@ -78,11 +76,7 @@ func (s *Search) ToggleSearchMode() {
 
 // GetModeInfo stuff
 func (s Search) GetModeInfo() string {
-	var mode = s.queryMode.String()
-	if s.queryMode != INTELLIGENT {
-		mode += "-" + s.functionMode.String()
-	}
-	return mode
+	return s.queryMode.String() + "-" + s.functionMode.String()
 }
 
 func (s Search) getSelectedHint(input string, cursorPos int, index int) string {

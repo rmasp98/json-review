@@ -3,6 +3,7 @@ package jsontree
 import (
 	"encoding/json"
 	"fmt"
+	"kube-review/utils"
 	"log"
 	"regexp"
 	"strings"
@@ -251,6 +252,11 @@ func (n *NodeList) FindNextHighlightedNode() error {
 		}
 	}
 	return fmt.Errorf("No matches in this node")
+}
+
+// Save writes content of GetJSON to file
+func (n NodeList) Save(filename string) error {
+	return utils.Save(filename, n.GetJSON(-1), true)
 }
 
 // Internal functions/////////////////////////////////////////////////////

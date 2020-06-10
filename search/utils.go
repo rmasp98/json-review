@@ -25,14 +25,14 @@ type QueryEnum int
 const (
 	// REGEX a
 	REGEX QueryEnum = iota
-	// QUERY a
-	QUERY
 	// INTELLIGENT a
 	INTELLIGENT
+	// QUERY a
+	QUERY
 )
 
 func (qe QueryEnum) String() string {
-	return [...]string{"Regex", "Query", "Intelligent"}[qe]
+	return [...]string{"Regex", "Intelligent", "Query"}[qe]
 }
 
 type sNodeList interface {
@@ -90,6 +90,6 @@ var operators = []string{
 	"|",  // Intersection
 	"-",  // Subtraction of matching elements
 	"&&", // Show all if second contains elements
-	"<-", // Only show first if second contains elements
+	"<-", // Only show first if both contain elements
 	"->", // Only show second elements
 }

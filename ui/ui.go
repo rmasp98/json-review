@@ -2,6 +2,7 @@ package ui
 
 import (
 	"kube-review/jsontree"
+	"kube-review/search"
 )
 
 var cui CursesUI
@@ -35,9 +36,9 @@ func (ve ViewEnum) Help() string {
 }
 
 // Run is the entry point for the curses UI interface
-func Run(nodeList *jsontree.NodeList) error {
+func Run(nodeList *jsontree.NodeList, queryList *search.QueryList) error {
 	var err error
-	cui, err = NewCursesUI(nodeList)
+	cui, err = NewCursesUI(nodeList, queryList)
 	if err != nil {
 		return err
 	}
