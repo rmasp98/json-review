@@ -16,7 +16,7 @@ func TestReturnsErrorIfNotRootNode(t *testing.T) {
 }
 
 func TestCanGetSizeOfView(t *testing.T) {
-	nodes := createNodes()
+	nodes := createNodes(fullNodesRaw)
 	view, _ := nodelist.NewView(nodes)
 	actual := view.Size()
 	expected := len(nodes)
@@ -26,7 +26,7 @@ func TestCanGetSizeOfView(t *testing.T) {
 }
 
 func TestCanGetFullNodeListFromView(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	actual := view.GetNodes(0, 17)
 	expected := fullNodes
 	if actual != expected {
@@ -35,7 +35,7 @@ func TestCanGetFullNodeListFromView(t *testing.T) {
 }
 
 func TestCanGetSubsetOfNodesFromView(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	actual := view.GetNodes(0, 2)
 	expected := "Root\n├──GlossDiv"
 	if actual != expected {
@@ -44,7 +44,7 @@ func TestCanGetSubsetOfNodesFromView(t *testing.T) {
 }
 
 func TestCanGetOffsetListOfNodesFromView(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	actual := view.GetNodes(5, 2)
 	expected := "│  │     ├──Acronym\n│  │     ├──GlossDef"
 	if actual != expected {
@@ -53,7 +53,7 @@ func TestCanGetOffsetListOfNodesFromView(t *testing.T) {
 }
 
 func TestCanHandleRquestOfNonExistentNodes(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	actual := view.GetNodes(0, 50)
 	expected := fullNodes
 	if actual != expected {
@@ -62,7 +62,7 @@ func TestCanHandleRquestOfNonExistentNodes(t *testing.T) {
 }
 
 func TestCanGetFullJSONFromView(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	actual := view.GetJSON(0, 0, 23)
 	expected := fullJson
 	if !compareJSONStrings(actual, expected) {
@@ -71,7 +71,7 @@ func TestCanGetFullJSONFromView(t *testing.T) {
 }
 
 func TestCanGetSubsetJSONFromView(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	actual := view.GetJSON(0, 0, 2)
 	expected := "{\n    \"GlossDiv\": {"
 	if actual != expected {
@@ -80,16 +80,16 @@ func TestCanGetSubsetJSONFromView(t *testing.T) {
 }
 
 func TestCanGetOffsetJSONFromView(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
-	actual := view.GetJSON(0, 6, 2)
-	expected := "                \"GlossDef\": {\n                    \"GlossSeeAlso\": ["
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
+	actual := view.GetJSON(2, 4, 2)
+	expected := "        \"GlossDef\": {\n            \"GlossSeeAlso\": ["
 	if actual != expected {
 		t.Errorf("Expected '%s' but got '%s'", expected, actual)
 	}
 }
 
 func TestCanGetOutOfRangeJSONFromView(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	actual := view.GetJSON(0, 0, 50)
 	expected := fullJson
 	if !compareJSONStrings(actual, expected) {
@@ -98,7 +98,7 @@ func TestCanGetOutOfRangeJSONFromView(t *testing.T) {
 }
 
 func TestSearchReturnsCorrectIndicesForMatches(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	r := regexp.MustCompile("Gloss")
 	expected := []int{1, 2, 3, 6, 7, 11, 12}
 	actual := view.GetNodesMatching(r, nodelist.ANY, true)
@@ -108,7 +108,7 @@ func TestSearchReturnsCorrectIndicesForMatches(t *testing.T) {
 }
 
 func TestSearchWithNoMatchesReturnsEmptyArray(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	r := regexp.MustCompile("I will not match")
 	matches := view.GetNodesMatching(r, nodelist.ANY, true)
 	if len(matches) > 0 {
@@ -117,7 +117,7 @@ func TestSearchWithNoMatchesReturnsEmptyArray(t *testing.T) {
 }
 
 func TestSearchSpecificallyInKeyReturnsCorrectMatches(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	r := regexp.MustCompile("G")
 	expected := []int{5, 8, 12, 13, 14}
 	actual := view.GetNodesMatching(r, nodelist.VALUE, true)
@@ -127,7 +127,7 @@ func TestSearchSpecificallyInKeyReturnsCorrectMatches(t *testing.T) {
 }
 
 func TestSearchRelativeMatchesSelfIfChildLevelZero(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	r := regexp.MustCompile("Entry")
 	expected := []int{3}
 	actual := view.GetRelativesMatching(12, 1, 0, r, nodelist.KEY, true)
@@ -137,7 +137,7 @@ func TestSearchRelativeMatchesSelfIfChildLevelZero(t *testing.T) {
 }
 
 func TestSearchRelativeDoesNotIncludeSelfIfChildLevelNotZero(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	r := regexp.MustCompile("Entry")
 	actual := view.GetRelativesMatching(3, 0, 1, r, nodelist.KEY, true)
 	if len(actual) > 0 {
@@ -146,7 +146,7 @@ func TestSearchRelativeDoesNotIncludeSelfIfChildLevelNotZero(t *testing.T) {
 }
 
 func TestSearchRelativeReturnsIndexForMatchingChildren(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	r := regexp.MustCompile("Gloss")
 	expected := []int{2, 3}
 	actual := view.GetRelativesMatching(1, 0, 2, r, nodelist.KEY, true)
@@ -156,7 +156,7 @@ func TestSearchRelativeReturnsIndexForMatchingChildren(t *testing.T) {
 }
 
 func TestFilterReturnsRootForEmptyNodes(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	newView, _ := view.Filter([]int{})
 	expected := "Root"
 	actual := newView.GetNodes(0, 2)
@@ -166,7 +166,7 @@ func TestFilterReturnsRootForEmptyNodes(t *testing.T) {
 }
 
 func TestFilterReturnsParentsAsWell(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	newView, _ := view.Filter([]int{4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 	expected := fullNodes
 	actual := newView.GetNodes(0, 17)
@@ -176,7 +176,7 @@ func TestFilterReturnsParentsAsWell(t *testing.T) {
 }
 
 func TestFindHighlightDoesNotReturnStartOffsetIfOtherNodesAvailable(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	view.Highlight([]int{2, 5})
 	expected := 2
 	actual, _ := view.FindNextHighlight(0, 5)
@@ -186,7 +186,7 @@ func TestFindHighlightDoesNotReturnStartOffsetIfOtherNodesAvailable(t *testing.T
 }
 
 func TestFindHighlightReturnsErrorIfNoHighlightFound(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	view.Highlight([]int{2})
 	_, actual := view.FindNextHighlight(3, 0)
 	if actual == nil {
@@ -195,13 +195,55 @@ func TestFindHighlightReturnsErrorIfNoHighlightFound(t *testing.T) {
 }
 
 func TestNewHighlightRemovesPreviousHighlights(t *testing.T) {
-	view, _ := nodelist.NewView(createNodes())
+	view, _ := nodelist.NewView(createNodes(fullNodesRaw))
 	view.Highlight([]int{2})
 	view.Highlight([]int{3})
 	expected := 3
 	actual, _ := view.FindNextHighlight(0, 0)
 	if actual != expected {
 		t.Errorf("Expected %d but got %d", expected, actual)
+	}
+}
+
+// Now figure out how to test this...
+// Test returning errors for failed parts
+
+func TestSplitReturnsErrorIfRootNotValid(t *testing.T) {
+	view, _ := nodelist.NewView(createNodes(splitNodesRaw))
+	_, actual := view.Split([]string{"path", "to", "non-root"}, []string{"path", "to", "target"})
+	if actual == nil {
+		t.Error("Expected an error but got none")
+	}
+}
+
+func TestSplitReturnsErrorIfTargetNotValid(t *testing.T) {
+	view, _ := nodelist.NewView(createNodes(splitNodesRaw))
+	_, actual := view.Split([]string{"path", "to", "root"}, []string{"path", "to", "non-target"})
+	if actual == nil {
+		t.Error("Expected an error but got none")
+	}
+}
+
+func TestSplitReturnsCorrectNamesForSplits(t *testing.T) {
+	view, _ := nodelist.NewView(createNodes(splitNodesRaw))
+	split, _ := view.Split([]string{"path", "to", "root"}, []string{"path", "to", "target"})
+	actual := []string{}
+	for key := range split {
+		actual = append(actual, key)
+	}
+	expected := []string{"Hello", "Goodbye"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected %v but got %v", expected, actual)
+	}
+}
+
+func TestSplitReturnsCorrectViews(t *testing.T) {
+	view, _ := nodelist.NewView(createNodes(splitNodesRaw))
+	split, _ := view.Split([]string{"path", "to", "root"}, []string{"path", "to", "target"})
+	expected := "\"Test\""
+	actual := split["Hello"].GetJSON(12, 0, 1)
+	if actual != expected {
+		t.Errorf("Expected %s but got %s", expected, actual)
 	}
 }
 
@@ -266,12 +308,32 @@ var (
 		nodelist.NewNode("title", "\"S\"", 2),
 		nodelist.NewNode("title", "\"example glossary\"", 1),
 	}
+
+	splitNodesRaw = []nodelist.Node{
+		nodelist.NewNode("Root", "{", 0),
+		nodelist.NewNode("path", "{", 1),
+		nodelist.NewNode("to", "{", 2),
+		nodelist.NewNode("root", "[", 3),
+		nodelist.NewNode("[]0", "{", 4),
+		nodelist.NewNode("path", "{", 5),
+		nodelist.NewNode("to", "{", 6),
+		nodelist.NewNode("target", "\"Hello\"", 7),
+		nodelist.NewNode("[]1", "{", 4),
+		nodelist.NewNode("path", "{", 5),
+		nodelist.NewNode("to", "{", 6),
+		nodelist.NewNode("target", "\"Goodbye\"", 7),
+		nodelist.NewNode("[]2", "{", 4),
+		nodelist.NewNode("path", "{", 5),
+		nodelist.NewNode("to", "{", 6),
+		nodelist.NewNode("target", "\"Hello\"", 7),
+		nodelist.NewNode("other", "\"Test\"", 7),
+	}
 )
 
-func createNodes() []*nodelist.Node {
+func createNodes(nl []nodelist.Node) []*nodelist.Node {
 	var nodes []*nodelist.Node
-	for index := range fullNodesRaw {
-		nodes = append(nodes, &fullNodesRaw[index])
+	for index := range nl {
+		nodes = append(nodes, &nl[index])
 	}
 	return nodes
 }

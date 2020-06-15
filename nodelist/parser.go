@@ -10,57 +10,43 @@ import (
 
 // Parser is responsible for processing input json into nodeLists
 type Parser struct {
-	nodes    *[]Node
-	complete bool
-	callback func()
-	wg       sync.WaitGroup
+	nodes      *[]Node
+	parseError error
+	callback   func(error)
 }
 
 // NewParser creates a new Parser...
-func NewParser(nodes *[]Node, callback func()) Parser {
-	return Parser{nodes, false, callback, sync.WaitGroup{}}
+func NewParser(nodes *[]Node, callback func(error)) Parser {
+	return Parser{nodes, fmt.Errorf("Incomplete"), callback}
 }
 
 // Parse stuff
-func (p *Parser) Parse(jsonData []byte) error {
-	(*p.nodes) = append((*p.nodes), NewNode("Root", "", 0))
+func (p *Parser) Parse(jsonData []byte, blocking bool) error {
 	var data interface{}
 	if err := json.Unmarshal(jsonData, &data); err != nil {
 		return err
 	}
-	p.wg.Add(1)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		defer p.wg.Done()
-		p.createNode(data, 0)
+		defer wg.Done()
+		(*p.nodes) = append((*p.nodes), NewNode("Root", "", 0))
+		p.parseError = p.createNode(data, 0)
+		if p.callback != nil {
+			p.callback(p.parseError)
+		}
 	}()
+	if blocking {
+		wg.Wait()
+	}
 	return nil
 }
 
-// WaitForComplete will block the thread until parsing is complete
-func (p *Parser) WaitForComplete() {
-	p.wg.Wait()
+// IsComplete will return true if parse was successfully completed
+func (p *Parser) IsComplete() bool {
+	return p.parseError == nil
 }
-
-// CreateNodeList parses nodeList from file
-// func (p *Parser) CreateNodeList(jsonData []byte) error {
-// p.nodes = []Node{NewNode("Root", "", 0)}
-// var data interface{}
-// if err := json.Unmarshal(jsonData, &data); err != nil {
-// 	return err
-// }
-// // Could change this into a goroutine (return err should then kill program)
-// if err := p.createNode(data, 0); err != nil {
-// 	return err
-// }
-// p.complete = true
-// //////////////////////////////////
-// return nil
-// }
-
-// GetNodeList returns current list of nodes plus whether it has been full loaded
-// func (p Parser) GetNodeList(block bool) ([]Node, bool) {
-// return p.nodes, p.complete
-// }
 
 func (p *Parser) createNode(data interface{}, level int) error {
 	parentIndex := len(*p.nodes) - 1

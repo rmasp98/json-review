@@ -59,7 +59,7 @@ func (v View) GetNodes(start, num int) string {
 // GetJSON returns formated JSON for nodeIndex. The JSON output can be offset and
 // number of lines returned limited using the offset and num inputs
 func (v View) GetJSON(nodeIndex, offset, num int) string {
-	return v.getJSON(nodeIndex, 0, offset, &num)
+	return v.getJSON(nodeIndex, nodeIndex, 0, offset, &num)
 }
 
 // GetNodesMatching searches entire view for matches of matchtype to regex. Set equal to false to invert result
@@ -100,7 +100,7 @@ func (v View) Filter(nodeIndices []int) (View, error) {
 	return NewView(nodes)
 }
 
-// Highlight clears current highlight and applies highlight to node pointed to by nodeIndices
+// Highlight clears current highlight and applies highlight to nodes pointed to by nodeIndices
 func (v *View) Highlight(nodeIndices []int) {
 	for index := range v.nodes {
 		v.nodes[index].isHighlighted = false
@@ -131,20 +131,64 @@ func (v View) FindNextHighlight(nodeIndex, startOffset int) (int, error) {
 	return 0, fmt.Errorf("No highlighted nodes in nodeIndex: %d", nodeIndex)
 }
 
+// GetSplitNodes returns value of nodeIndex and all sibling nodeIndices for splitting view
+// parentLevel defines how many levels above node index the parent is
+func (v View) GetSplitNodes(nodeIndex int, parentLevel int) (string, []*Node) {
+	parentIndex := nodeIndex
+	for i := 0; i < parentLevel; i++ {
+		parentIndex = v.nodes[parentIndex].parent
+	}
+
+	lastChildIndex := v.getLastChild(parentIndex)
+	var nodes []*Node
+	for i := parentIndex; i < lastChildIndex+1; i++ {
+		nodes = append(nodes, v.nodes[i].node)
+	}
+	return v.nodes[nodeIndex].node.value, nodes
+}
+
+// Split stuff
+func (v View) Split(root, target []string) (map[string]View, error) {
+	rootIndex, rootNodes, rootErr := v.getSplitRoot(root)
+	if rootErr != nil {
+		return map[string]View{}, rootErr
+	}
+
+	targetIndices := v.getTargetIndices(target, rootIndex)
+	if len(targetIndices) == 0 {
+		return map[string]View{}, fmt.Errorf("There are no nodes at target")
+	}
+
+	viewNodes := v.splitNodes(targetIndices, len(target))
+	for name, nodes := range viewNodes {
+		viewNodes[name] = append(rootNodes, nodes...)
+	}
+
+	views := map[string]View{}
+	for name, nodes := range viewNodes {
+		var err error
+		views[name], err = NewView(nodes)
+		if err != nil {
+			return map[string]View{}, err
+		}
+	}
+	return views, nil
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // PRIVATE FUNCTIONS
 
-func (v View) getJSON(nodeIndex, level, offset int, num *int) string {
+func (v View) getJSON(activeIndex, nodeIndex, level, offset int, num *int) string {
 	var finalJSON string
 	if *num != 0 {
 		JSON := v.nodes[nodeIndex].node.GetJSON(level > 0)
-		if JSON != "" && nodeIndex >= offset {
+		if JSON != "" && nodeIndex >= activeIndex+offset {
 			finalJSON = strings.Repeat(spacing, level) + JSON
 			*num--
 		}
 		var childrenJSON string
 		for _, childIndex := range v.nodes[nodeIndex].children {
-			childJSON := v.getJSON(childIndex, level+1, offset, num)
+			childJSON := v.getJSON(activeIndex, childIndex, level+1, offset, num)
 			if childJSON != "" {
 				childrenJSON += childJSON + ",\n"
 			}
@@ -155,7 +199,7 @@ func (v View) getJSON(nodeIndex, level, offset int, num *int) string {
 		finalJSON += strings.TrimRight(childrenJSON, ",\n")
 
 		closeBracket := v.nodes[nodeIndex].node.GetCloseBracket()
-		if closeBracket != "" && *num != 0 && v.getLastChild(nodeIndex) >= offset {
+		if closeBracket != "" && *num != 0 && v.getLastChild(nodeIndex) >= activeIndex+offset {
 			finalJSON += "\n" + strings.Repeat(spacing, level) + closeBracket
 			*num--
 		}
@@ -251,6 +295,64 @@ func (v View) appendAndSortParentIndices(nodeIndices []int) []int {
 	}
 	sort.Ints(finalIndices)
 	return finalIndices
+}
+
+func (v View) getSplitRoot(root []string) (int, []*Node, error) {
+	rootIndex := 0
+	rootNodes := []*Node{v.nodes[0].node}
+	for _, nodeKey := range root {
+		found := false
+		for _, index := range v.nodes[rootIndex].children {
+			if v.nodes[index].node.key == nodeKey {
+				rootIndex = index
+				rootNodes = append(rootNodes, v.nodes[rootIndex].node)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return -1, []*Node{}, fmt.Errorf("Root path does not match json data at %s", nodeKey)
+		}
+	}
+	return rootIndex, rootNodes, nil
+}
+
+func (v View) getTargetIndices(target []string, rootIndex int) []int {
+	targetIndices := []int{}
+	for _, index := range v.nodes[rootIndex].children {
+		nodeIndex := index
+		for nodeKeyIndex, nodeKey := range target {
+			for _, child := range v.nodes[nodeIndex].children {
+				if v.nodes[child].node.key == nodeKey {
+					if nodeKeyIndex == len(target)-1 {
+						targetIndices = append(targetIndices, child)
+					}
+					nodeIndex = child
+				}
+			}
+		}
+	}
+	return targetIndices
+}
+
+func (v View) splitNodes(targetIndices []int, parentLevel int) map[string][]*Node {
+	viewNodes := map[string][]*Node{}
+	for _, index := range targetIndices {
+		name := strings.Trim(v.nodes[index].node.value, "\"")
+
+		parentIndex := index
+		for i := 0; i < parentLevel; i++ {
+			parentIndex = v.nodes[parentIndex].parent
+		}
+
+		lastChildIndex := v.getLastChild(parentIndex)
+		var nodes []*Node
+		for i := parentIndex; i < lastChildIndex+1; i++ {
+			nodes = append(nodes, v.nodes[i].node)
+		}
+		viewNodes[name] = append(viewNodes[name], nodes...)
+	}
+	return viewNodes
 }
 
 func getSearchFunction(matchType MatchType, r *regexp.Regexp, equal bool) searchFunctionType {

@@ -1,19 +1,16 @@
 package nodelist_test
 
 import (
+	"fmt"
 	"kube-review/nodelist"
 	"testing"
 )
-
-// test
-// Map return consistent order (if needed?)
 
 func TestCanParseJSONString(t *testing.T) {
 	stringJSON := `"Hello World"`
 	nodes := []nodelist.Node{}
 	parser := nodelist.NewParser(&nodes, nil)
-	parser.Parse([]byte(stringJSON))
-	parser.WaitForComplete()
+	parser.Parse([]byte(stringJSON), true)
 	actual := nodes[0].GetJSON(false)
 	if actual != stringJSON {
 		t.Errorf("Expecting '%s' but got '%s'", stringJSON, actual)
@@ -22,7 +19,7 @@ func TestCanParseJSONString(t *testing.T) {
 
 func TestCanParseJSONInt(t *testing.T) {
 	intJSON := `1492`
-	nodeList := getNodeList(intJSON)
+	nodeList := getNodeList(intJSON, nil)
 	actual := nodeList[0].GetJSON(false)
 	if actual != intJSON {
 		t.Errorf("Expecting '%s' but got '%s'", intJSON, actual)
@@ -31,7 +28,7 @@ func TestCanParseJSONInt(t *testing.T) {
 
 func TestCanParseJSONFloat(t *testing.T) {
 	floatJSON := `1.3947619`
-	nodeList := getNodeList(floatJSON)
+	nodeList := getNodeList(floatJSON, nil)
 	actual := nodeList[0].GetJSON(false)
 	if actual != floatJSON {
 		t.Errorf("Expecting '%s' but got '%s'", floatJSON, actual)
@@ -40,7 +37,7 @@ func TestCanParseJSONFloat(t *testing.T) {
 
 func TestCanParseJSONBool(t *testing.T) {
 	boolJSON := `false`
-	nodeList := getNodeList(boolJSON)
+	nodeList := getNodeList(boolJSON, nil)
 	actual := nodeList[0].GetJSON(false)
 	if actual != boolJSON {
 		t.Errorf("Expecting '%s' but got '%s'", boolJSON, actual)
@@ -49,7 +46,7 @@ func TestCanParseJSONBool(t *testing.T) {
 
 func TestCanParseJSONNull(t *testing.T) {
 	nullJSON := `null`
-	nodeList := getNodeList(nullJSON)
+	nodeList := getNodeList(nullJSON, nil)
 	actual := nodeList[0].GetJSON(false)
 	if actual != nullJSON {
 		t.Errorf("Expecting '%s' but got '%s'", nullJSON, actual)
@@ -58,7 +55,7 @@ func TestCanParseJSONNull(t *testing.T) {
 
 func TestCanParseJSONMultipleArray(t *testing.T) {
 	expectedArray := []string{"[", `"Goodbye"`, `"World"`, `"Hello"`, `"World"`}
-	nodes := getNodeList(`["Goodbye","World","Hello","World"]`)
+	nodes := getNodeList(`["Goodbye","World","Hello","World"]`, nil)
 	for index, expected := range expectedArray {
 		actual := nodes[index].GetJSON(index != 0)
 		if actual != expected {
@@ -69,7 +66,7 @@ func TestCanParseJSONMultipleArray(t *testing.T) {
 
 func TestCanParseJSONMultipleMap2(t *testing.T) {
 	expectedResults := []string{"{", `"Goodbye": "World"`, `"Hello": "World"`}
-	nodes := getNodeList(`{"Goodbye":"World","Hello":"World"}`)
+	nodes := getNodeList(`{"Goodbye":"World","Hello":"World"}`, nil)
 	for index, expected := range expectedResults {
 		actual := nodes[index].GetJSON(index != 0)
 		if actual != expected {
@@ -80,7 +77,7 @@ func TestCanParseJSONMultipleMap2(t *testing.T) {
 
 func TestCanParseJSONMultiLevelArray(t *testing.T) {
 	expectedArray := []string{"[", "{", `"Goodbye": "Child"`, "{", `"Hello": "Adult"`}
-	nodes := getNodeList(`[{"Goodbye":"Child"},{"Hello":"Adult"}]`)
+	nodes := getNodeList(`[{"Goodbye":"Child"},{"Hello":"Adult"}]`, nil)
 	for index, expected := range expectedArray {
 		actual := nodes[index].GetJSON(index != 0)
 		if actual != expected {
@@ -91,7 +88,7 @@ func TestCanParseJSONMultiLevelArray(t *testing.T) {
 
 func TestCanParseJSONMultiLevelMap(t *testing.T) {
 	expectedArray := []string{`{`, `"Goodbye": {`, `"Cruel World": "Test"`, `"Hello": "World"`}
-	nodes := getNodeList(`{"Goodbye":{"Cruel World":"Test","Hello":"World"}}`)
+	nodes := getNodeList(`{"Goodbye":{"Cruel World":"Test","Hello":"World"}}`, nil)
 	for index, expected := range expectedArray {
 		actual := nodes[index].GetJSON(index != 0)
 		if actual != expected {
@@ -102,7 +99,7 @@ func TestCanParseJSONMultiLevelMap(t *testing.T) {
 
 func TestEnsureMapsReturnInAlphabeticalOrder(t *testing.T) {
 	expectedArray := []string{`{`, `"a": 1`, `"b": 2`, `"c": 3`}
-	nodes := getNodeList(`{"c":3, "a":1,"b":2}`)
+	nodes := getNodeList(`{"c":3, "a":1,"b":2}`, nil)
 	for index, expected := range expectedArray {
 		actual := nodes[index].GetJSON(index != 0)
 		if actual != expected {
@@ -111,12 +108,28 @@ func TestEnsureMapsReturnInAlphabeticalOrder(t *testing.T) {
 	}
 }
 
-// HELPER FUNCTIONS AND DATA //////////////////////////////////////////////
-
-func getNodeList(jsonData string) []nodelist.Node {
+func TestParseThrowsAnErrorIfJsonInvalid(t *testing.T) {
 	nodes := []nodelist.Node{}
 	parser := nodelist.NewParser(&nodes, nil)
-	parser.Parse([]byte(jsonData))
-	parser.WaitForComplete()
+	actual := parser.Parse([]byte(`{"c"=3, "a":1,"b":2}`), true)
+	if actual == nil {
+		t.Errorf("Expecting an error but got nothing")
+	}
+}
+
+func TestCallsCallbackWithNilIfSuccessful(t *testing.T) {
+	actual := fmt.Errorf("Test Error")
+	getNodeList(`{"c":3, "a":1,"b":2}`, func(err error) { actual = err })
+	if actual != nil {
+		t.Errorf("Expecting no error but got '%s'", actual)
+	}
+}
+
+// HELPER FUNCTIONS AND DATA //////////////////////////////////////////////
+
+func getNodeList(jsonData string, callback func(error)) []nodelist.Node {
+	nodes := []nodelist.Node{}
+	parser := nodelist.NewParser(&nodes, callback)
+	parser.Parse([]byte(jsonData), true)
 	return nodes
 }
