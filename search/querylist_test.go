@@ -40,7 +40,7 @@ func TestCanGetQueryTypeFromName(t *testing.T) {
 	ql := search.NewQueryList()
 	ql.Load("../testdata/querylist-test.json", "queryschema.json")
 	_, actual := ql.GetQuery("test2less")
-	if actual != search.INTELLIGENT {
+	if actual != search.EXPRESSION {
 		t.Errorf("Expected 'Intelligent' but instead got '%v'", actual)
 	}
 }
@@ -78,5 +78,34 @@ func TestCanRemoveFromTheList(t *testing.T) {
 	actual, _ := ql.GetQuery("test1more")
 	if actual != "" {
 		t.Errorf("Expected empty string but instead got '%s'", actual)
+	}
+}
+
+func TestGetHintsReturnsStringListWithMatchingQueriesAndDescriptions(t *testing.T) {
+	ql := search.NewQueryList()
+	ql.Load("../testdata/querylist-test.json", "queryschema.json")
+	actual := ql.GetHints("test")
+	expected := []string{"test1more - \033[1;31mFirst test (REGEX)\033[0m", "test2less - \033[1;31mSecond test (Expression)\033[0m"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	}
+}
+
+func TestSearchHelpReturnsNothingIfMatchesAQueryExactly(t *testing.T) {
+	ql := search.NewQueryList()
+	ql.Load("../testdata/querylist-test.json", "queryschema.json")
+	actual := ql.GetHints("test1more")
+	if len(actual) != 0 {
+		t.Errorf("Expected nothing but got '%v'", actual)
+	}
+}
+
+func TestInsertHintReturnsNameOfSelectedHint(t *testing.T) {
+	ql := search.NewQueryList()
+	ql.Load("../testdata/querylist-test.json", "queryschema.json")
+	actual := ql.InsertHint("test", 1)
+	expected := "test2less"
+	if actual != expected {
+		t.Errorf("Expected '%s' but instead got '%s'", expected, actual)
 	}
 }

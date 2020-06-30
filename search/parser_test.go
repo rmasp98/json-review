@@ -6,136 +6,165 @@ import (
 	"testing"
 )
 
-func TestParseBasicConditionReturnsNoError(t *testing.T) {
-	_, actual := search.Parse("Any==\"Test\"")
+func TestParseReturnsErrorForInvalidFunction(t *testing.T) {
+	_, actual := search.Parse("NotAFunction()")
+	if actual == nil {
+		t.Error("Expected error but got nothing")
+	}
+}
+
+func TestParseBasicFindFunctionReturnsNoError(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\")")
 	if actual != nil {
 		t.Errorf("Expected no error but got '%s'", actual)
 	}
 }
 
-func TestParseReturnsErrorIfControlInvalid(t *testing.T) {
-	_, actual := search.Parse("Nothing==\"Test\"")
+func TestParseReturnsErrorIfNoBracketBeforeFunction(t *testing.T) {
+	_, actual := search.Parse("Find")
 	if actual == nil {
-		t.Errorf("Expected Error but got no error")
+		t.Error("Expected error but got nothing")
 	}
 }
 
-func TestParseReturnsErrorIfConditionInvalid(t *testing.T) {
-	_, actual := search.Parse("Any=\"Test\"")
+func TestParseReturnsErrorIfFindDoesNotHaveRegexArgument(t *testing.T) {
+	_, actual := search.Parse("FindNodes( )")
 	if actual == nil {
-		t.Errorf("Expected Error but got no error")
+		t.Error("Expected error but got nothing")
 	}
 }
 
-func TestParseReturnsErrorIfQuotesInvalid(t *testing.T) {
-	_, actual := search.Parse("Any==\"Test")
+func TestParseReturnsErrorIfFindHasNoClosingBrackets(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\"")
 	if actual == nil {
-		t.Errorf("Expected Error but got no error")
+		t.Error("Expected error but got nothing")
 	}
 }
 
 func TestParseReturnsNoErrorForBasicBrackets(t *testing.T) {
-	_, actual := search.Parse("(Key==\"Test\")")
+	_, actual := search.Parse("(FindNodes(\"test\"))")
 	if actual != nil {
 		t.Errorf("Expected no error but got '%s'", actual)
 	}
 }
 
-func TestParseReturnsErrorIfNotMatchingBrackets(t *testing.T) {
-	_, actual := search.Parse("(Any==\"Test\"")
+func TestParseReturnsThrowErrorForNoCloseBracket(t *testing.T) {
+	_, actual := search.Parse("(FindNodes(\"test\")")
 	if actual == nil {
-		t.Errorf("Expected Error but got no error")
-	}
-}
-
-func TestParseReturnsErrorIfEndsInOperator(t *testing.T) {
-	_, actual := search.Parse("Any==\"Test\"&&")
-	if actual == nil {
-		t.Errorf("Expected Error but got no error")
-	}
-}
-
-func TestParseReturnsErrorIfNoOperator(t *testing.T) {
-	_, actual := search.Parse("Any==\"Test\"Any==\"Test\"")
-	if actual == nil {
-		t.Errorf("Expected Error but got no error")
-	}
-}
-
-func TestParsePicksUpErrorsAfterFirstCondition(t *testing.T) {
-	_, actual := search.Parse("Any==\"Test\"&&Nothing==\"Test\"")
-	if actual == nil {
-		t.Errorf("Expected Error but got no error")
+		t.Error("Expected error but got nothing")
 	}
 }
 
 func TestParseCanHandleMultipleBrackets(t *testing.T) {
-	_, actual := search.Parse("Value==\"test\"+((AnyChildHasValue==\"Test\")+HasParent==\"Test\")")
+	_, actual := search.Parse("(((FindNodes(\"test\"))))")
 	if actual != nil {
 		t.Errorf("Expected no error but got '%s'", actual)
+	}
+}
+
+func TestParseReturnsNoErrorForFunctionWithOperator(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\")+FindNodes(\"test\")")
+	if actual != nil {
+		t.Errorf("Expected no error but got '%s'", actual)
+	}
+}
+
+func TestParseReturnsErrorForHangingOperator(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\")+")
+	if actual == nil {
+		t.Error("Expected error but got nothing")
+	}
+}
+
+func TestParseReturnsErrorIfFunctionsHaveNoOperator(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\")FindNodes(\"test\")")
+	if actual == nil {
+		t.Error("Expected error but got nothing")
 	}
 }
 
 func TestParseCanHandleSpaces(t *testing.T) {
-	_, actual := search.Parse(" Key == \"test\" + ( ( ParentHasChildAny == \"Test\" ) - ChildHasKey == \"Test\" ) ")
+	_, actual := search.Parse(" FindNodes( \"test\") +  FindNodes( \"test\" ) ")
 	if actual != nil {
 		t.Errorf("Expected no error but got '%s'", actual)
 	}
 }
 
-func TestParseDetectsParentChildCommandsAtBeginningOfInput(t *testing.T) {
-	_, actual := search.Parse("ParentHasChildKey==\"Test\"")
+func TestThrowsErrorForInvalidRegex(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"*\")")
 	if actual == nil {
-		t.Errorf("Expected Error but got no error")
+		t.Error("Expected error but got nothing")
 	}
 }
 
-func TestParseAllowsParentChildCommandsWithinBracketsAfterMainCommands(t *testing.T) {
-	_, actual := search.Parse("Any == \"Test\" + (AnyParentHasChildKey==\"Test\")")
+func TestCanParseAllArgumentsWithoutError(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\", ANY, true, out)")
 	if actual != nil {
 		t.Errorf("Expected no error but got '%s'", actual)
 	}
 }
 
-func TestParseDetectsParentChildCommandsNotInBracketsFollowingMainCommands(t *testing.T) {
-	_, actual := search.Parse("Any == \"Test\" + ParentHasChildKey==\"Test\"")
-	if actual == nil {
-		t.Errorf("Expected Error but got no error")
-	}
-}
-
-func TestParseAllowsCaseInsensitiveControls(t *testing.T) {
-	_, actual := search.Parse(" keY == \"test\" + ( ( paRenthaScHildAnY == \"Test\" ) - ChildHasKey == \"Test\" ) ")
+func TestCanParseKeywordArgumentsWithoutError(t *testing.T) {
+	_, actual := search.Parse("FindNodes(regex=\"test\", matchType=ANY, equal=true, output=out)")
 	if actual != nil {
 		t.Errorf("Expected no error but got '%s'", actual)
 	}
 }
 
-func TestParserReturnsErrorForInvalidRegex(t *testing.T) {
-	_, actual := search.Parse("Key==\"*\"")
+func TestCanParseThrowsErrorForInvalidKwarg(t *testing.T) {
+	_, actual := search.Parse("FindNodes(regex=\"test\", matchType=ANY, equal=true, fakearg=out)")
 	if actual == nil {
-		t.Errorf("Expected error but got no error")
+		t.Error("Expected error but got nothing")
+	}
+}
+
+func TestCanParseThrowsErrorIfNormalArgFollowsKwarg(t *testing.T) {
+	_, actual := search.Parse("FindNodes(regex=\"test\", matchType=ANY, equal=true, out)")
+	if actual == nil {
+		t.Error("Expected error but got nothing")
+	}
+}
+
+func TestCanParseAllFindRelativeArgumentsWithoutError(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\", output=nodes) + FindRelative(nodes, \"test\", 0, 1, ANY, true, out)")
+	if actual != nil {
+		t.Errorf("Expected no error but got '%s'", actual)
+	}
+}
+
+func TestThrowsErrorIfInputNotYetCreated(t *testing.T) {
+	_, actual := search.Parse("FindRelative(input, \"test\", 0, 1, ANY, true, out)")
+	if actual == nil {
+		t.Error("Expected error but got nothing")
+	}
+}
+
+func TestEverythingButInputOutputIsCaseInsensitive(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\", OutPut=nodes) + fiNdreLatiVe(nodes, \"test\", 0, 1, aNy, tRUe, OUt)")
+	if actual != nil {
+		t.Errorf("Expected no error but got '%s'", actual)
 	}
 }
 
 func TestBasicCommandCorrectlyParsed(t *testing.T) {
-	commands, _ := search.Parse("Any==\"Test\"")
-	expected := search.Command{"Any", true, "Test", "", ""}
-	actual := commands[0]
-	if actual != expected {
-		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	actual, _ := search.Parse("FindNodes(\"test\", ANY, true, out)")
+	expected := search.NewCommand(search.CMDFINDNODES, map[string]string{"regex": "test", "matchType": "ANY", "equal": "true"}, "out", "", "")
+	if !reflect.DeepEqual(actual[0], expected) {
+		t.Errorf("Expected '%v' but got '%v'", expected, actual[0])
 	}
 }
 
-func TestComplexCommandParsesCorrectly(t *testing.T) {
-	actual, _ := search.Parse("((Any==\"Test\")+Key!=\"Test2\")")
+func TestComplexCommandCorrectlyParsed(t *testing.T) {
+	actual, _ := search.Parse("((FindNodes(\"test\", Key, output=outnodes)) + FindRelative(outnodes, \"next test\", 2, 5))")
 	expected := []search.Command{
-		search.Command{"", false, "", "", "("},
-		search.Command{"", false, "", "", "("},
-		search.Command{"Any", true, "Test", "", ")"},
-		search.Command{"Key", false, "Test2", "+", ")"},
+		search.NewCommand(search.CMDNULL, nil, "", "", "("),
+		search.NewCommand(search.CMDNULL, nil, "", "", "("),
+		search.NewCommand(search.CMDFINDNODES, map[string]string{"regex": "test", "matchType": "Key"}, "outnodes", "", ")"),
+		search.NewCommand(search.CMDFINDRELATIVE, map[string]string{"nodes": "outnodes", "regex": "next test", "relativeStart": "2", "depth": "5"}, "", "+", ")"),
 	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	for index := range actual {
+		if !reflect.DeepEqual(actual[index], expected[index]) {
+			t.Errorf("Expected \n'%v' but got \n'%v'", expected[index], actual[index])
+		}
 	}
 }

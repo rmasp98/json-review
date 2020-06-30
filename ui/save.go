@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"kube-review/jsontree"
+	"kube-review/nodelist"
 	"kube-review/search"
 	"log"
 	"os"
@@ -12,12 +12,12 @@ import (
 
 // SaveUI sets up processes for extracting save information from user
 type SaveUI struct {
-	nodeList  *jsontree.NodeList
+	nodeList  *nodelist.NodeList
 	queryList *search.QueryList
 }
 
 // NewSaveUI stuff
-func NewSaveUI(nodeList *jsontree.NodeList, queryList *search.QueryList) SaveUI {
+func NewSaveUI(nodeList *nodelist.NodeList, queryList *search.QueryList) SaveUI {
 	return SaveUI{nodeList, queryList}
 }
 
@@ -42,7 +42,7 @@ func (s SaveUI) saveProcess() {
 
 	var err error
 	if saveType == "Raw" {
-		err = s.nodeList.Save(filename)
+		// err = s.nodeList.Save(filename)
 	} else if saveType == "Query" {
 		err = s.queryList.Save(filename)
 	} else {

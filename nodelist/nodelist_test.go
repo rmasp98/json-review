@@ -3,6 +3,7 @@ package nodelist_test
 import (
 	"kube-review/nodelist"
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -118,8 +119,9 @@ func TestCanFindNextHighlight(t *testing.T) {
 func TestCanSplitNodesBasedOnInputString(t *testing.T) {
 	nl, _ := nodelist.NewNodeList([]byte(splitNodesBase), true)
 	nl.SplitViews("path.to.root = path.to.target")
-	expected := []string{"main", "Hello", "Goodbye"}
+	expected := []string{"Goodbye", "Hello", "main"}
 	actual := nl.ListViews()
+	sort.Strings(actual)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
 	}
@@ -128,8 +130,9 @@ func TestCanSplitNodesBasedOnInputString(t *testing.T) {
 func TestCanSplitNodesWithNoRoot(t *testing.T) {
 	nl, _ := nodelist.NewNodeList([]byte(splitNodesArray), true)
 	nl.SplitViews("path.to.target")
-	expected := []string{"main", "Hello", "Goodbye"}
+	expected := []string{"Goodbye", "Hello", "main"}
 	actual := nl.ListViews()
+	sort.Strings(actual)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
 	}

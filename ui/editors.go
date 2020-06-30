@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"kube-review/jsontree"
+	"kube-review/nodelist"
 	"kube-review/search"
 
 	"github.com/awesome-gocui/gocui"
@@ -42,12 +42,12 @@ func basicEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 // SearchEditor stuff
 type SearchEditor struct {
 	s               search.Search
-	nodeList        *jsontree.NodeList
+	nodeList        *nodelist.NodeList
 	searchCursorPos int
 }
 
 // NewSearchEditor stuff
-func NewSearchEditor(nodeList *jsontree.NodeList, queryList *search.QueryList) *SearchEditor {
+func NewSearchEditor(nodeList *nodelist.NodeList, queryList *search.QueryList) *SearchEditor {
 	return &SearchEditor{search.NewSearch(search.REGEX, queryList), nodeList, 0}
 }
 
@@ -93,10 +93,11 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 		cui.UpdateViewTitle(SEARCH, "Search: Mode="+e.s.GetModeInfo())
 		return
 	} else if key == gocui.KeyCtrlN {
-		e.nodeList.FindNextHighlightedNode()
-	} else if key == gocui.KeyCtrlR {
-		e.nodeList.Clear()
+		e.nodeList.FindNextHighlight()
 	}
+	// else if key == gocui.KeyCtrlR {
+	// 	e.nodeList.Clear()
+	// }
 
 	if cursorPos, y := v.Cursor(); y == 0 {
 		input, _ := v.Line(0)
@@ -117,11 +118,11 @@ func clearInput(v *gocui.View) {
 
 // NodesEditor is the editor for the PANEL view
 type NodesEditor struct {
-	nodeList *jsontree.NodeList
+	nodeList *nodelist.NodeList
 }
 
 // NewNodesEditor creates a new nodesEditor object
-func NewNodesEditor(nodeList *jsontree.NodeList) *NodesEditor {
+func NewNodesEditor(nodeList *nodelist.NodeList) *NodesEditor {
 	return &NodesEditor{nodeList}
 }
 
@@ -151,11 +152,11 @@ func (e *NodesEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modi
 	case key == gocui.KeyArrowLeft:
 		x, y := v.Origin()
 		v.SetOrigin(x-1, y)
-	case ch == 'e':
-		e.nodeList.ExpandActiveNode()
-	case ch == 'c':
-		newY := e.nodeList.CollapseActiveNode()
-		v.SetCursor(0, newY)
+	// case ch == 'e':
+	// 	e.nodeList.ExpandActiveNode()
+	// case ch == 'c':
+	// 	newY := e.nodeList.CollapseActiveNode()
+	// 	v.SetCursor(0, newY)
 	case key == gocui.KeyPgup:
 		e.nodeList.MoveTopNode(-25)
 	case key == gocui.KeyPgdn:
@@ -165,11 +166,11 @@ func (e *NodesEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modi
 
 // DisplayEditor stuff
 type DisplayEditor struct {
-	nodeList *jsontree.NodeList
+	nodeList *nodelist.NodeList
 }
 
 // NewDisplayEditor stuff
-func NewDisplayEditor(nodeList *jsontree.NodeList) *DisplayEditor {
+func NewDisplayEditor(nodeList *nodelist.NodeList) *DisplayEditor {
 	return &DisplayEditor{nodeList}
 }
 
@@ -177,9 +178,9 @@ func NewDisplayEditor(nodeList *jsontree.NodeList) *DisplayEditor {
 func (e *DisplayEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	switch {
 	case key == gocui.KeyArrowUp:
-		e.nodeList.MoveJSONPosition(-1)
+		e.nodeList.MoveJSONView(-1)
 	case key == gocui.KeyArrowDown:
-		e.nodeList.MoveJSONPosition(1)
+		e.nodeList.MoveJSONView(1)
 	case key == gocui.KeyArrowLeft:
 		x, _ := v.Origin()
 		v.SetOrigin(x-1, 0)
@@ -187,9 +188,9 @@ func (e *DisplayEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mo
 		x, _ := v.Origin()
 		v.SetOrigin(x+1, 0)
 	case key == gocui.KeyPgup:
-		e.nodeList.MoveJSONPosition(-25)
+		e.nodeList.MoveJSONView(-25)
 	case key == gocui.KeyPgdn:
-		e.nodeList.MoveJSONPosition(25)
+		e.nodeList.MoveJSONView(25)
 	}
 }
 

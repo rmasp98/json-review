@@ -3,156 +3,205 @@ package search
 import (
 	"fmt"
 	"regexp"
-	"sort"
+	"strconv"
 	"strings"
 )
 
-// Parse uses the parser class to validate an intelligent search string
-// and return a list of commands
+// Parse stuff
 func Parse(input string) ([]Command, error) {
-	trimmedInput := strings.Trim(input, " ")
-	p := parser{trimmedInput, 0, len(trimmedInput), 0, []Command{}}
+	p := parser{strings.Trim(input, " "), 0, []string{}, Command{}, []Command{}}
 	return p.parse()
 }
 
 type parser struct {
-	input           string
-	charIterator    int
-	lenInput        int
-	numOpenBrackets int
-	outputCommands  []Command
+	input          string
+	charIter       int
+	outputs        []string
+	currentCommand Command
+	outputCommands []Command
 }
 
 func (p *parser) parse() ([]Command, error) {
-	var err error
-	var currentCommand Command
-	for p.charIterator < p.lenInput {
-		if currentCommand.Operator, err = p.checkOperators(); err != nil {
-			return []Command{}, p.createError(err.Error())
+	var openBrackets = 0
+	for p.charIter < len(p.input) {
+		if err := p.checkOperator(); err != nil {
+			return []Command{}, err
 		}
-		p.checkBrackets('(', 1, &currentCommand)
-		if currentCommand.Control, err = p.check(controls); err != nil {
-			return []Command{}, p.createError("A control is missing or invalid")
+		openBrackets += p.checkBrackets("(")
+		if err := p.checkFunction(); err != nil {
+			return []Command{}, err
 		}
-		var condition string
-		if condition, err = p.check(conditionals); err != nil {
-			return []Command{}, p.createError("A condition is missing or invalid")
-		}
-		currentCommand.Equal = (condition == "==")
-		if currentCommand.Regex, err = p.checkQuotes(); err != nil {
-			return []Command{}, p.createError(err.Error())
-		}
-		p.checkBrackets(')', -1, &currentCommand)
-		if currentCommand.Control != "" {
-			p.outputCommands = append(p.outputCommands, currentCommand)
-			currentCommand = Command{"", false, "", "", ""}
+		openBrackets -= p.checkBrackets(")")
+		if p.currentCommand.function != CMDNULL {
+			p.outputCommands = append(p.outputCommands, p.currentCommand)
+			p.currentCommand = Command{}
 		}
 	}
-
-	if err := p.validateCommands(); err != nil {
-		return []Command{}, err
+	if openBrackets != 0 {
+		return []Command{}, fmt.Errorf("No close bracket")
 	}
 	return p.outputCommands, nil
 }
 
-func (p *parser) stripLeft(num int) {
-	p.charIterator += num
-	for p.charIterator < p.lenInput && p.input[p.charIterator] == ' ' {
-		p.charIterator++
-	}
-}
-
-func (p *parser) check(checkList []string) (string, error) {
-	orderedCheckList := orderCheckList(checkList)
-	for _, check := range orderedCheckList {
-		var checkEnd = p.charIterator + len(check)
-		if checkEnd < p.lenInput && strings.EqualFold(p.input[p.charIterator:checkEnd], check) {
-			p.stripLeft(len(check))
-			return check, nil
+func (p parser) getNextSlice(numChars int) string {
+	if numChars == -1 {
+		if p.charIter < len(p.input) {
+			return p.input[p.charIter:]
 		}
-	}
-	return "", fmt.Errorf("")
-}
-
-func (p *parser) checkQuotes() (string, error) {
-	if quote := p.getQuote(); quote != "" {
-		substring := strings.Split(p.input[p.charIterator+1:], quote)
-		// If quote at end of string, len(subs) would be at least 1
-		if len(substring) > 1 {
-			p.stripLeft(len(substring[0]) + 2)
-			if _, err := regexp.Compile(substring[0]); err != nil {
-				return "", fmt.Errorf("Regex is not valid")
-			}
-			return substring[0], nil
-		}
-		return "", fmt.Errorf("Missing end quote")
-	}
-	return "", fmt.Errorf("Regex is missing or has not been quoted")
-}
-
-func (p *parser) checkBrackets(bracket byte, incrementor int, command *Command) {
-	for p.charIterator < p.lenInput && p.input[p.charIterator] == bracket {
-		command.Bracket = string(bracket)
-		p.outputCommands = append(p.outputCommands, *command)
-		*command = Command{"", false, "", "", ""}
-		p.numOpenBrackets = p.numOpenBrackets + incrementor
-		p.stripLeft(1)
-	}
-}
-
-func (p *parser) checkOperators() (string, error) {
-	var oldPosition = p.charIterator
-	operator, _ := p.check(operators)
-	if p.charIterator != oldPosition && p.charIterator == p.lenInput {
-		return "", fmt.Errorf("Input cannot end with an operator")
-	} else if p.charIterator != 0 && p.charIterator == oldPosition && p.charIterator < p.lenInput {
-		return "", fmt.Errorf("Missing or hanging operator")
-	}
-	return operator, nil
-}
-
-func (p parser) getQuote() string {
-	if p.charIterator < p.lenInput {
-		switch p.input[p.charIterator] {
-		case '"':
-			return "\""
-		case '\'':
-			return "'"
-		case '`':
-			return "`"
-		}
+	} else if numChars+p.charIter <= len(p.input) {
+		return p.input[p.charIter : p.charIter+numChars]
 	}
 	return ""
 }
 
-func (p parser) validateCommands() error {
-	if p.numOpenBrackets != 0 {
-		return fmt.Errorf("Mismatch of brackets")
+func (p *parser) stripLeft(numChars int) {
+	p.charIter += numChars
+	for p.getNextSlice(1) == " " {
+		p.charIter++
 	}
-	controlLevel := 0 // 0=no input, 1=input but no brackets 2+=input and brackets
-	for _, command := range p.outputCommands {
-		if command.Control != "" && !isMainCommand(command) && controlLevel < 2 {
-			return fmt.Errorf("Conditional: '%s' will not have any input", command.GetConditionalString())
-		} else if isMainCommand(command) && controlLevel == 0 {
-			controlLevel++
+}
+
+func (p *parser) checkOperator() error {
+	for _, operator := range Operators {
+		if p.getNextSlice(len(operator)) == operator {
+			p.stripLeft(len(operator))
+			if len(p.getNextSlice(-1)) == 0 {
+				return fmt.Errorf("Hanging operator")
+			}
+			p.currentCommand.operator = operator
+			return nil
 		}
-		if command.Bracket == "(" && controlLevel > 0 {
-			controlLevel++
-		} else if command.Bracket == ")" && controlLevel > 0 {
-			controlLevel--
+	}
+	// This is broken for when starts with bracket
+	if p.charIter < 8 {
+		return nil
+	}
+	return fmt.Errorf("Missing operator")
+}
+
+func (p *parser) checkBrackets(bracket string) int {
+	numBrackets := 0
+	for p.getNextSlice(1) == bracket {
+		p.stripLeft(1)
+		numBrackets++
+
+		p.currentCommand.bracket = bracket
+		p.outputCommands = append(p.outputCommands, p.currentCommand)
+		p.currentCommand = Command{}
+	}
+	return numBrackets
+}
+
+func (p *parser) checkFunction() error {
+	if strings.EqualFold(p.getNextSlice(13), CMDFINDRELATIVE.String()+"(") {
+		p.stripLeft(13)
+		p.currentCommand.function = CMDFINDRELATIVE
+		if err := p.parseArguments(p.getNextSlice(-1), findRelArgs); err != nil {
+			return err
 		}
+	} else if strings.EqualFold(p.getNextSlice(10), CMDFINDNODES.String()+"(") {
+		p.stripLeft(10)
+		p.currentCommand.function = CMDFINDNODES
+		if err := p.parseArguments(p.getNextSlice(-1), findArgs); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Invalid function name")
 	}
 	return nil
 }
 
-func orderCheckList(checkList []string) []string {
-	orderedCheckList := append([]string{}, checkList...)
-	sort.SliceStable(orderedCheckList, func(i, j int) bool {
-		return len(orderedCheckList[i]) > len(orderedCheckList[j])
-	})
-	return orderedCheckList
+func (p *parser) parseArguments(args string, template []argTemplate) error {
+	arguments := strings.Split(p.getNextSlice(-1), ")")
+	if len(arguments) > 1 {
+		var argMap = map[string]string{}
+		var kwargsActive = false
+		for index, arg := range strings.Split(arguments[0], ",") {
+			var name string
+			var finalArg string
+			arg := strings.Trim(arg, " ")
+			if arg != "" {
+				// Ensures the check for "=" is outside a regex
+				if strings.Contains(strings.Split(arg, "\"")[0], "=") {
+					kwargsActive = true
+					split := strings.Split(arg, "=")
+					name = strings.Trim(split[0], " ")
+					finalArg = strings.Trim(split[1], " ")
+					var argType string
+					for _, argTemp := range template {
+						if strings.EqualFold(argTemp.name, name) {
+							argType = argTemp.argType
+						}
+					}
+					if err := p.validateArgument(finalArg, argType); err != nil {
+						return err
+					}
+				} else if !kwargsActive && index < len(template) {
+					if err := p.validateArgument(arg, template[index].argType); err != nil {
+						return err
+					}
+					name = template[index].name
+					finalArg = arg
+				} else {
+					return fmt.Errorf("Not allowed a normal argument after a keyword argument")
+				}
+			} else {
+				return fmt.Errorf("Argument empty")
+			}
+			if name == "output" {
+				p.currentCommand.output = finalArg
+			} else {
+				if name == "regex" {
+					finalArg = strings.Trim(finalArg, "\"")
+				}
+				argMap[name] = finalArg
+			}
+		}
+		// Strip arguments plus final bracket
+		p.stripLeft(len(arguments[0]) + 1)
+		p.currentCommand.input = argMap
+		return nil
+	}
+	return fmt.Errorf("No close bracket for function")
 }
 
-func (p parser) createError(err string) error {
-	return fmt.Errorf("%s\n%s", strings.Repeat(" ", p.charIterator)+"^", err)
+func (p *parser) validateArgument(argument, argType string) error {
+	switch argType {
+	case "regex":
+		if (argument)[0] == '"' && (argument)[len(argument)-1] == '"' {
+			argument := strings.Trim(argument, "\"")
+			if _, err := regexp.Compile(argument); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("Regex has not been quoted")
+		}
+	case "MatchType":
+		if !strings.EqualFold(argument, "Any") && !strings.EqualFold(argument, "Key") && !strings.EqualFold(argument, "Value") {
+			return fmt.Errorf("MatchType invalid")
+		}
+	case "bool":
+		if !strings.EqualFold(argument, "True") && !strings.EqualFold(argument, "False") {
+			return fmt.Errorf("Bool invalid")
+		}
+	case "int":
+		if _, err := strconv.Atoi(argument); err != nil {
+			return err
+		}
+	case "input":
+		var exists = false
+		for _, output := range p.outputs {
+			if argument == output {
+				exists = true
+			}
+		}
+		if !exists {
+			return fmt.Errorf("Input (%s) is not created before being called", argument)
+		}
+	case "output":
+		p.outputs = append(p.outputs, argument)
+	default:
+		return fmt.Errorf("Invalid argument type: '%s'", argType)
+	}
+	return nil
 }

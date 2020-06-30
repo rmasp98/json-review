@@ -3,7 +3,9 @@ package search
 import (
 	"fmt"
 	"kube-review/utils"
+	"regexp"
 	"sort"
+	"strings"
 )
 
 // QueryList allow viewing, editing and saving of the list of Common Misconfigurations
@@ -43,9 +45,33 @@ func (q QueryList) GetQuery(name string) (string, QueryEnum) {
 	return q.list[name].Query, q.list[name].QueryType
 }
 
+// GetHints stuff
+func (q QueryList) GetHints(input string) []string {
+	var hints []string
+	r, _ := regexp.Compile(input)
+	for _, query := range q.GetNames() {
+		if input == query {
+			return []string{}
+		}
+		if r.MatchString(query) {
+			hints = append(hints, query+" - "+redBold+q.GetDescription(query)+reset)
+		}
+	}
+	return hints
+}
+
+// InsertHint stuff
+func (q QueryList) InsertHint(input string, index int) string {
+	hints := q.GetHints(input)
+	if index < len(hints) {
+		return strings.Split(hints[index], " - ")[0]
+	}
+	return input
+}
+
 // Add stuff
 func (q *QueryList) Add(name string, query string, description string, queryType QueryEnum) error {
-	if queryType != REGEX && queryType != INTELLIGENT {
+	if queryType != REGEX && queryType != EXPRESSION {
 		return fmt.Errorf("Invalid query type. Must be either Regex or Intelligent")
 	}
 	q.list[name] = QueryData{query, description, queryType}

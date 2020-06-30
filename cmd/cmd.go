@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"kube-review/jsontree"
+	"kube-review/nodelist"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -46,7 +46,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&kubeContext, "context", "", "The name of the kubeconfig context to use")
 }
 
-func getConfig() *jsontree.NodeList {
+func getConfig() *nodelist.NodeList {
 	var rawJSON []byte
 	if kubeFile != "" {
 		rawJSON = loadFromFile()
@@ -67,16 +67,14 @@ func loadFromFile() []byte {
 	return rawJSON
 }
 
-func getNodeList(rawJSON []byte) *jsontree.NodeList {
+func getNodeList(rawJSON []byte) *nodelist.NodeList {
 	if len(rawJSON) > 500000 {
 		fmt.Println("This is a large file. Loading may take a few seconds...")
 	}
-	var err error
-	jsonData := new(jsontree.NodeList)
-	*jsonData, err = jsontree.NewNodeList(string(rawJSON))
+	jsonData, err := nodelist.NewNodeList(rawJSON, true)
 	if err != nil {
 		fmt.Println("Could not parse JSON data. Maybe an error in the file?")
 		os.Exit(1)
 	}
-	return jsonData
+	return &jsonData
 }

@@ -1,53 +1,62 @@
 package search
 
 import (
-	"kube-review/jsontree"
+	"kube-review/nodelist"
 	"regexp"
-	"sync"
+	"sort"
+	"strconv"
+	"strings"
 )
 
-// Command contains data for running an intelligent command
-// format: <operator> <control><equal><regex> <bracket>
-// e.g. + Any=="test" (
+// ForValues(nodes, searchtype, outnodes)
+// get values of nodes and perform a find on those
+
+// Command stuff
 type Command struct {
-	Control  string
-	Equal    bool
-	Regex    string
-	Operator string
-	Bracket  string
+	function CmdFunc
+	input    map[string]string
+	output   string
+	operator string
+	bracket  string
 }
 
-// RunConitional stuff
-func (c Command) RunConitional(indices []int, nodeList sNodeList) []int {
-	if r, err := regexp.Compile(c.Regex); err == nil {
-		if matched, _ := regexp.MatchString("ParentHasChild", c.Control); matched {
-			return runInParallel(indices, func(index int) []int {
-				return nodeList.GetParentChildrenMatching(index, r, getMatchType(c.Control), c.Equal, getRecursion(c.Control))
-			})
-		} else if matched, _ := regexp.MatchString("ChildHas", c.Control); matched {
-			return runInParallel(indices, func(index int) []int {
-				return nodeList.GetChildrenMatching(index, r, getMatchType(c.Control), c.Equal, getRecursion(c.Control))
-			})
-		} else if c.Control != "" {
-			return nodeList.GetNodesMatching(r, getMatchType(c.Control), c.Equal)
+// NewCommand stuff
+func NewCommand(function CmdFunc, input map[string]string, output string, operator string, bracket string) Command {
+	return Command{function, input, output, operator, bracket}
+}
+
+// RunFunction stuff
+func (c Command) RunFunction(input []int, nodeList sNodeList) (string, []int) {
+	if r, matchType, equal, err := c.processBaseInputs(); err == nil {
+		if c.function == CMDFINDNODES {
+			return c.output, nodeList.GetNodesMatching(r, matchType, equal)
+		} else if c.function == CMDFINDRELATIVE {
+			var list []int
+			relativeStartLevel, depth := c.processRelativeInputs()
+			for _, index := range input {
+				list = append(list, nodeList.GetRelativesMatching(index, relativeStartLevel, depth, r, matchType, equal)...)
+			}
+			return c.output, orderedUnion(list, []int{})
 		}
 	}
-	return []int{}
+	return "", []int{}
 }
 
 // RunOperation stuff
 func (c Command) RunOperation(left, right []int) []int {
-	switch c.Operator {
+	switch c.operator {
+	case "":
+		return orderedUnion(left, right)
 	case "+":
-		return append(left, right...)
+		return orderedUnion(left, right)
 	case "-":
 		return subtract(left, right)
-	case "&&":
-		if len(left) > 0 && len(right) > 0 {
-			return append(left, right...)
-		}
 	case "|":
 		return intersection(left, right)
+	case "&&":
+		if len(left) > 0 && len(right) > 0 {
+			return orderedUnion(left, right)
+		}
 	case "<-":
 		if len(right) > 0 {
 			return left
@@ -62,20 +71,45 @@ func (c Command) RunOperation(left, right []int) []int {
 
 // HasOpenBracket stuff
 func (c Command) HasOpenBracket() bool {
-	return c.Bracket == "("
+	return c.bracket == "("
 }
 
 // HasCloseBracket stuff
 func (c Command) HasCloseBracket() bool {
-	return c.Bracket == ")"
+	return c.bracket == ")"
 }
 
-// GetConditionalString returns the original conditional input for errors
-func (c Command) GetConditionalString() string {
-	if c.Equal {
-		return c.Control + "==" + c.Regex
+// GetInputName returns the name of expected input that should be output by another function call
+func (c Command) GetInputName() string {
+	return c.input["nodes"]
+}
+
+func (c Command) processBaseInputs() (*regexp.Regexp, nodelist.MatchType, bool, error) {
+	matchType := getMatchType(c.input["matchType"])
+	var equal = false
+	if c.input["equal"] == "" || strings.EqualFold(c.input["equal"], "true") {
+		equal = true
 	}
-	return c.Control + "!=" + c.Regex
+	r, err := regexp.Compile(c.input["regex"])
+	return r, matchType, equal, err
+}
+
+func (c Command) processRelativeInputs() (int, int) {
+	relativeStartLevel, _ := strconv.Atoi(c.input["relativeStartLevel"])
+	var depth = 1
+	if temp, ok := c.input["depth"]; ok {
+		depth, _ = strconv.Atoi(temp)
+	}
+	return relativeStartLevel, depth
+}
+
+func getMatchType(input string) nodelist.MatchType {
+	if strings.EqualFold(input, nodelist.KEY.String()) {
+		return nodelist.KEY
+	} else if strings.EqualFold(input, nodelist.VALUE.String()) {
+		return nodelist.VALUE
+	}
+	return nodelist.ANY
 }
 
 func subtract(left, right []int) []int {
@@ -106,34 +140,19 @@ func intersection(left, right []int) []int {
 	return result
 }
 
-func getMatchType(control string) jsontree.MatchType {
-	for i := 0; i < 3; i++ {
-		if matched, _ := regexp.MatchString(jsontree.MatchType(i).String()+"$", control); matched {
-			return jsontree.MatchType(i)
-		}
+// TODO: this is fairly central so find more efficient way
+func orderedUnion(left, right []int) []int {
+	unique := make(map[int]struct{}, len(left)+len(right))
+	for _, index := range left {
+		unique[index] = struct{}{}
 	}
-	return jsontree.ANY
-}
-
-func getRecursion(control string) bool {
-	matched, _ := regexp.MatchString("^Any", control)
-	return matched
-}
-
-func runInParallel(indices []int, function func(int) []int) []int {
-	var outIndices []int
-	var mutex sync.Mutex
-	var wg sync.WaitGroup
-	for _, index := range indices {
-		wg.Add(1)
-		go func(index int) {
-			newIndices := function(index)
-			mutex.Lock()
-			outIndices = append(outIndices, newIndices...)
-			mutex.Unlock()
-			wg.Done()
-		}(index)
+	for _, index := range right {
+		unique[index] = struct{}{}
 	}
-	wg.Wait()
-	return outIndices
+	result := make([]int, 0, len(unique))
+	for index := range unique {
+		result = append(result, index)
+	}
+	sort.Ints(result)
+	return result
 }

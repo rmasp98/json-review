@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"kube-review/jsontree"
+	"kube-review/nodelist"
 	"kube-review/search"
 	"log"
 	"strings"
@@ -14,14 +14,14 @@ import (
 type CursesUI struct {
 	gui       *gocui.Gui
 	win       Window
-	nodeList  *jsontree.NodeList
+	nodeList  *nodelist.NodeList
 	queryList *search.QueryList
 }
 
 var helpBase = "Ctrl+D: Exit  | Tab: Next View | Ctrl+S: Save"
 
 // NewCursesUI stuff
-func NewCursesUI(nodeList *jsontree.NodeList, queryList *search.QueryList) (CursesUI, error) {
+func NewCursesUI(nodeList *nodelist.NodeList, queryList *search.QueryList) (CursesUI, error) {
 	gui, err := gocui.NewGui(gocui.OutputNormal, true)
 	if err != nil {
 		return CursesUI{}, err

@@ -6,7 +6,7 @@
     },
     "test2less": {
         "query":"Any==\"[0-9]{2}\"",
-        "description": "Second test (INTELLIGENT)",
+        "description": "Second test (Expression)",
         "queryType": 1
     }
 }
