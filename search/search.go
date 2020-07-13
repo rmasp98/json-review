@@ -1,6 +1,7 @@
 package search
 
 import (
+	"fmt"
 	"kube-review/nodelist"
 	"regexp"
 )
@@ -12,7 +13,7 @@ type Search struct {
 	ql           *QueryList
 }
 
-// NewSearch stuff
+// NewSearch DWISOTT
 func NewSearch(queryMode QueryEnum, queryList *QueryList) Search {
 	return Search{queryMode, FIND, queryList}
 }
@@ -42,19 +43,17 @@ func (s Search) InsertSelectedHint(input string, cursorPos int, index int) (stri
 // Execute runs a search based on input, QueryMode and searchMode
 func (s Search) Execute(input string, nodeList sNodeList) error {
 	nodeList.ResetView()
-	qMode := s.queryMode
-	if qMode == QUERY {
-		input, qMode = s.ql.GetQuery(input)
+	matchedNodes, err := s.getMatchedNodes(input, nodeList)
+	if err != nil {
+		return err
 	}
-
-	if qMode == EXPRESSION {
-		intelligent, err := NewExpression(input)
-		if err != nil {
-			return err
-		}
-		return intelligent.Execute(nodeList, s.functionMode)
+	if s.functionMode == FILTER {
+		return nodeList.Filter(matchedNodes)
+	} else if s.functionMode == FIND {
+		nodeList.Highlight(matchedNodes)
+		return nodeList.FindNextHighlight()
 	}
-	return s.executeRegex(input, nodeList)
+	return fmt.Errorf("Invalid search type. Should be Filter or Find")
 }
 
 // ToggleQueryMode switches between regex and query mode
@@ -67,7 +66,7 @@ func (s *Search) ToggleSearchMode() {
 	s.functionMode = (s.functionMode + 1) % 2
 }
 
-// GetModeInfo stuff
+// GetModeInfo returns the search and function type for UI title
 func (s Search) GetModeInfo() string {
 	return s.queryMode.String() + "-" + s.functionMode.String()
 }
@@ -81,19 +80,26 @@ func (s Search) getPossibleHints(input string, cursorPos int) []string {
 	return []string{}
 }
 
-func (s Search) executeRegex(regex string, nodeList sNodeList) error {
-	r, err := regexp.Compile(regex)
-	if err != nil {
-		return err
-	}
-	matchNodes := nodeList.GetNodesMatching(r, nodelist.ANY, true)
-	if s.functionMode == FILTER {
-		return nodeList.Filter(matchNodes)
-	} else if s.functionMode == FIND {
-		nodeList.Highlight(matchNodes)
-		if err := nodeList.FindNextHighlight(); err != nil {
-			return err
+func (s Search) getMatchedNodes(input string, nodeList sNodeList) ([]int, error) {
+	qMode := s.queryMode
+	regex := input
+	if qMode == QUERY {
+		if regex, qMode = s.ql.GetQuery(input); regex == "" {
+			return nil, fmt.Errorf("'%s' is not a valid query", input)
 		}
 	}
-	return nil
+
+	if qMode == EXPRESSION {
+		expression, err := NewExpression(regex)
+		if err != nil {
+			return nil, err
+		}
+		// use output to find/filter
+		return expression.Execute(nodeList), nil
+	}
+	r, err := regexp.Compile(regex)
+	if err != nil {
+		return nil, err
+	}
+	return nodeList.GetNodesMatching(r, nodelist.ANY, true), nil
 }

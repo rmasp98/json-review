@@ -10,8 +10,8 @@ import (
 func TestBasicCommandExecutesCorrectFunctions(t *testing.T) {
 	expression, _ := search.NewExpression("FindNodes(\"test\")")
 	mock := mocks.NodeListMock{}
-	expression.Execute(&mock, search.FILTER)
-	expected := []string{"GetNodesMatching", "Filter"}
+	expression.Execute(&mock)
+	expected := []string{"GetNodesMatching"}
 	actual := mock.Calls
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
@@ -22,8 +22,8 @@ func TestComplexExpressionExecutesCorrectFunctions(t *testing.T) {
 	expression, _ := search.NewExpression("FindNodes(\"test\", output=nodes) + FindRelative(nodes, \"test\")")
 	mock := mocks.NodeListMock{}
 	mock.Returns = [][]int{[]int{1}}
-	expression.Execute(&mock, search.FILTER)
-	expected := []string{"GetNodesMatching", "GetRelativesMatching", "Filter"}
+	expression.Execute(&mock)
+	expected := []string{"GetNodesMatching", "GetRelativesMatching"}
 	actual := mock.Calls
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
@@ -34,9 +34,8 @@ func TestComplexExpressionReturnsCorrectOutput(t *testing.T) {
 	expression, _ := search.NewExpression("FindNodes(\"test\", output=nodes) + FindRelative(nodes, \"test\")")
 	mock := mocks.NodeListMock{}
 	mock.Returns = [][]int{[]int{1, 5}, []int{1, 2}, []int{3, 6}}
-	expression.Execute(&mock, search.FILTER)
+	actual := expression.Execute(&mock)
 	expected := []int{1, 2, 3, 5, 6}
-	actual := mock.Args[3][0]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
 	}
@@ -46,9 +45,8 @@ func TestBracketExpressionReturnsCorrectOutput(t *testing.T) {
 	expression, _ := search.NewExpression("FindNodes(\"test\") - (FindNodes(\"test\") + FindNodes(\"test\"))")
 	mock := mocks.NodeListMock{}
 	mock.Returns = [][]int{[]int{1, 2, 3, 4, 5}, []int{1, 2}, []int{3, 6}}
-	expression.Execute(&mock, search.FILTER)
+	actual := expression.Execute(&mock)
 	expected := []int{4, 5}
-	actual := mock.Args[3][0]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
 	}
@@ -161,6 +159,22 @@ func TestDoesNothingForFunctionHintInArgumentHints(t *testing.T) {
 func TestInsertHintsInsertCorrectFunctionUpToBracket(t *testing.T) {
 	actual := search.InsertSelectedExpressionHint("Find", 1)
 	expected := "FindRelative("
+	if actual != expected {
+		t.Errorf("Expected '%s' but got '%s'", expected, actual)
+	}
+}
+
+func TestGetHintsPreviousFunctions(t *testing.T) {
+	actual := search.GetExpressionHints("FindNodes(\"test\") + ")
+	expected := []string{"FindNodes(regex, matchType, equal, output)", "FindRelative(nodes, regex, relativeStart, depth, matchType, equal, output)"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected '%v' but got '%v'", expected, actual)
+	}
+}
+
+func TestCanInsertSecondFunction(t *testing.T) {
+	actual := search.InsertSelectedExpressionHint("FindNodes(\"test\") + Fin", 1)
+	expected := "FindNodes(\"test\") + FindRelative("
 	if actual != expected {
 		t.Errorf("Expected '%s' but got '%s'", expected, actual)
 	}

@@ -78,12 +78,13 @@ var conditionals = []string{
 
 // Operators lists possible operators in expression search
 var Operators = []string{
-	"+",  // Union
-	"|",  // Intersection
-	"-",  // Subtraction of matching elements
+	// Operators should not match with anything below it (e.g. '-' conflicts with '->')
 	"&&", // Show all if second contains elements
 	"<-", // Only show first if both contain elements
 	"->", // Only show second elements
+	"+",  // Union
+	"|",  // Intersection
+	"-",  // Subtraction of matching elements
 }
 
 type argTemplate struct {

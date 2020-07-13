@@ -18,8 +18,6 @@ type CursesUI struct {
 	queryList *search.QueryList
 }
 
-var helpBase = "Ctrl+D: Exit  | Tab: Next View | Ctrl+S: Save"
-
 // NewCursesUI stuff
 func NewCursesUI(nodeList *nodelist.NodeList, queryList *search.QueryList) (CursesUI, error) {
 	gui, err := gocui.NewGui(gocui.OutputNormal, true)
@@ -45,6 +43,16 @@ func NewCursesUI(nodeList *nodelist.NodeList, queryList *search.QueryList) (Curs
 	if err := gui.SetKeybinding("", gocui.KeyCtrlS, gocui.ModNone, NewSaveUI(nodeList, queryList).Save); err != nil {
 		log.Panicln(err)
 	}
+	if err := gui.SetKeybinding("", gocui.KeyCtrlT, gocui.ModNone, cui.splitNodeList); err != nil {
+		log.Panicln(err)
+	}
+	if err := gui.SetKeybinding("", gocui.KeyCtrlY, gocui.ModNone, cui.selectView); err != nil {
+		log.Panicln(err)
+	}
+	gui.SetKeybinding("", gocui.KeyCtrlR, gocui.ModNone, func(g *gocui.Gui, v *gocui.View) error {
+		cui.nodeList.ResetView()
+		return nil
+	})
 
 	return cui, nil
 }
@@ -96,7 +104,7 @@ func (cui *CursesUI) UpdateViewTitle(view ViewEnum, title string) {
 func (cui *CursesUI) UpdateHelp(addedHelp string) {
 	if v, err := cui.gui.View(HELP.String()); err == nil {
 		v.Clear()
-		v.Write([]byte(helpBase + addedHelp))
+		v.Write([]byte(HELP.Help() + addedHelp))
 	}
 	log.Printf("Could not update help")
 }
@@ -128,8 +136,9 @@ func (cui CursesUI) setViews() error {
 				view.Title = "Search: Mode=Regex-Find"
 				view.Editor = NewSearchEditor(cui.nodeList, cui.queryList)
 				view.Editable = true
+				view.Autoscroll = true
 			case HELP:
-				view.Write([]byte(helpBase))
+				view.Write([]byte(HELP.Help()))
 			}
 		} else {
 			switch name {
@@ -139,9 +148,38 @@ func (cui CursesUI) setViews() error {
 			case DISPLAY:
 				view.Clear()
 				view.Write([]byte(cui.nodeList.GetJSON(layout.y1 - layout.y0)))
+			case VIEW:
+				view.Clear()
+				view.Write([]byte(cui.nodeList.GetCurrentView()))
 			}
 		}
 	}
+	return nil
+}
+
+func (cui CursesUI) splitNodeList(g *gocui.Gui, v *gocui.View) error {
+	var ch = make(chan string)
+	cui.CreatePopup("Split Nodes", "Define the string used to split the nodes:\n", NewWritePopupEditor(ch), true, false, true)
+	go func(ch chan string, nodeList *nodelist.NodeList) {
+		splitString := <-ch
+		nodeList.SplitViews(splitString)
+		cui.ClosePopup()
+	}(ch, cui.nodeList)
+	return nil
+}
+
+func (cui CursesUI) selectView(g *gocui.Gui, v *gocui.View) error {
+	var ch = make(chan string)
+	content := "Choose the nodelist view:"
+	for _, view := range cui.nodeList.ListViews() {
+		content += "\n" + view
+	}
+	cui.CreatePopup("Select View", content, NewSelectPopupEditor(ch), false, true, true)
+	go func(ch chan string, nodeList *nodelist.NodeList) {
+		view := <-ch
+		nodeList.SetView(view)
+		cui.ClosePopup()
+	}(ch, cui.nodeList)
 	return nil
 }
 

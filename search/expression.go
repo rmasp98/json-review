@@ -46,7 +46,7 @@ func InsertSelectedExpressionHint(input string, index int) string {
 	} else {
 		hint := strings.Split(getBaseFuntionHints(input)[index], "(")[0] + "("
 		input = strings.TrimRightFunc(input, func(c rune) bool {
-			return (c > 97 || c < 122) && (c > 41 || c < 90)
+			return (c > 97 && c < 122) || (c > 65 && c < 90)
 		})
 		output = input + hint
 	}
@@ -63,9 +63,8 @@ func NewExpression(input string) (Expression, error) {
 }
 
 // Execute stuff
-func (e Expression) Execute(nodeList sNodeList, mode FunctionEnum) error {
-	nodes := e.executeCommands(nodeList)
-	return nodeList.Filter(nodes)
+func (e Expression) Execute(nodeList sNodeList) []int {
+	return e.executeCommands(nodeList)
 }
 
 func (e *Expression) executeCommands(nodeList sNodeList) []int {
@@ -93,7 +92,7 @@ func (e *Expression) executeCommands(nodeList sNodeList) []int {
 
 func getFunctionType(input string) (CmdFunc, []string) {
 	bracketIndex := strings.LastIndex(input, "(")
-	if bracketIndex > 0 && unicode.IsLetter(rune(input[bracketIndex-1])) {
+	if bracketIndex > 0 && bracketIndex > strings.LastIndex(input, ")") && unicode.IsLetter(rune(input[bracketIndex-1])) {
 		arguments := strings.Split(input[bracketIndex+1:], ",")
 		if match, _ := regexp.Match("(?i)"+CMDFINDNODES.String()+"$", []byte(input[:bracketIndex])); match {
 			return CMDFINDNODES, arguments
@@ -118,8 +117,9 @@ func getArgumentHints(argIndex int, argTemp []argTemplate) []string {
 }
 
 func getBaseFuntionHints(input string) []string {
-	strippedInput := strings.TrimFunc(input, func(c rune) bool {
-		return (c <= 97 || c >= 122) && (c <= 41 || c >= 90)
+	endInput := input[strings.LastIndex(input, ")")+1:]
+	strippedInput := strings.TrimFunc(endInput, func(c rune) bool {
+		return (c <= 97 || c >= 122) && (c <= 65 || c >= 90)
 	})
 	var output []string
 	if match, _ := regexp.Match("(?i)"+strippedInput, []byte(CMDFINDNODES.String())); match {

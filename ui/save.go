@@ -42,7 +42,7 @@ func (s SaveUI) saveProcess() {
 
 	var err error
 	if saveType == "Raw" {
-		// err = s.nodeList.Save(filename)
+		err = s.nodeList.Save(filename)
 	} else if saveType == "Query" {
 		err = s.queryList.Save(filename)
 	} else {

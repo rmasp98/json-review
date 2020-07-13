@@ -204,7 +204,7 @@ func TestFindRelativeRunsWithDefaultvaluesIfNotProvided(t *testing.T) {
 func TestFindRelativeReturnsAnOrderedUnionOfIndices(t *testing.T) {
 	mock := mocks.NodeListMock{}
 	mock.Returns = [][]int{[]int{1, 3, 5, 6}, []int{2, 4, 6}}
-	input := map[string]string{"regex": "test"}
+	input := map[string]string{"regex": "test", "matchType": "Key"}
 	command := search.NewCommand(search.CMDFINDRELATIVE, input, "", "", "")
 	expected := []int{1, 2, 3, 4, 5, 6}
 	_, actual := command.RunFunction([]int{1, 2}, &mock)

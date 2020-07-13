@@ -3,7 +3,6 @@ package nodelist_test
 import (
 	"kube-review/nodelist"
 	"reflect"
-	"sort"
 	"testing"
 )
 
@@ -105,6 +104,22 @@ func TestFilterRemovesUndefinedNodes(t *testing.T) {
 	}
 }
 
+func TestFilterResetsAllViewLocationsAndOffsets(t *testing.T) {
+	nl, _ := nodelist.NewNodeList([]byte(fullJson), true)
+	nl.SetActiveNode(3)
+	nl.MoveJSONView(4)
+	nl.MoveTopNode(2)
+	nl.Filter([]int{0, 1, 2, 3, 4, 5, 6})
+	actualJSON := nl.GetJSON(1)
+	expectedJSON := "{"
+	actualNodes := nl.GetNodes(1)
+	expectedNodes := "Root"
+	if actualJSON != expectedJSON && actualNodes != expectedNodes {
+		t.Errorf("Expected '%s' and '%s' but got '%s' and '%s'", expectedJSON, expectedNodes, actualJSON, actualNodes)
+	}
+
+}
+
 func TestCanFindNextHighlight(t *testing.T) {
 	nl, _ := nodelist.NewNodeList([]byte(fullJson), true)
 	nl.Highlight([]int{5})
@@ -121,7 +136,6 @@ func TestCanSplitNodesBasedOnInputString(t *testing.T) {
 	nl.SplitViews("path.to.root = path.to.target")
 	expected := []string{"Goodbye", "Hello", "main"}
 	actual := nl.ListViews()
-	sort.Strings(actual)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
 	}
@@ -132,7 +146,6 @@ func TestCanSplitNodesWithNoRoot(t *testing.T) {
 	nl.SplitViews("path.to.target")
 	expected := []string{"Goodbye", "Hello", "main"}
 	actual := nl.ListViews()
-	sort.Strings(actual)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected '%v' but got '%v'", expected, actual)
 	}

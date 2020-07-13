@@ -2,7 +2,9 @@ package nodelist
 
 import (
 	"fmt"
+	"kube-review/utils"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -100,6 +102,9 @@ func (n *NodeList) Filter(nodeIndices []int) error {
 		return err
 	}
 	n.currentView = newView
+	n.activeNodeIndex = 0
+	n.topNodeIndex = 0
+	n.jsonViewOffset = 0
 	return nil
 }
 
@@ -142,7 +147,13 @@ func (n NodeList) ListViews() []string {
 	for k := range n.views {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 	return keys
+}
+
+// GetCurrentView returns the name of the current view
+func (n NodeList) GetCurrentView() string {
+	return n.currentViewName
 }
 
 // SetView stuff
@@ -158,6 +169,11 @@ func (n *NodeList) SetView(name string) error {
 // ResetView stuff
 func (n *NodeList) ResetView() {
 	n.currentView = n.views[n.currentViewName]
+}
+
+// Save writes JSON of active index to file
+func (n *NodeList) Save(filename string) error {
+	return utils.Save(filename, n.currentView.GetJSON(n.activeNodeIndex, 0, -1), true)
 }
 
 func parseSeparator(sep string) ([]string, []string) {

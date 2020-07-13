@@ -19,10 +19,12 @@ const (
 	DISPLAY
 	// HELP a
 	HELP
+	// VIEW a
+	VIEW
 )
 
 func (ve ViewEnum) String() string {
-	return [...]string{"Panel", "Search", "Display", "Help"}[ve]
+	return [...]string{"Panel", "Search", "Display", "Help", "View"}[ve]
 }
 
 // Help stuff
@@ -31,7 +33,8 @@ func (ve ViewEnum) Help() string {
 		" | E: Expand Node | C: Collapse Node",             //PANEL
 		" | Ctrl+Q: Toggle Query Mode | Ctrl+N: Find Next", //SEARCH
 		"", //DISPLAY
-		"", //HELP
+		"Ctrl+C: Exit  | Tab: Next View | Ctrl+R: Reset View | Ctrl+T: Split View | Ctrl+Y: Change View | Ctrl+S: Save ", //HELP
+		"", //VIEW
 	}[ve]
 }
 

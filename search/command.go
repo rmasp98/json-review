@@ -95,7 +95,7 @@ func (c Command) processBaseInputs() (*regexp.Regexp, nodelist.MatchType, bool, 
 }
 
 func (c Command) processRelativeInputs() (int, int) {
-	relativeStartLevel, _ := strconv.Atoi(c.input["relativeStartLevel"])
+	relativeStartLevel, _ := strconv.Atoi(c.input["relativeStart"])
 	var depth = 1
 	if temp, ok := c.input["depth"]; ok {
 		depth, _ = strconv.Atoi(temp)

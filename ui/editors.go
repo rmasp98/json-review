@@ -26,16 +26,30 @@ func basicEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	case key == gocui.KeyArrowLeft:
 		v.MoveCursor(-1, 0, false)
 	case key == gocui.KeyArrowRight:
-		v.MoveCursor(1, 0, false)
+		cursorPos, _ := v.Cursor()
+		originPos, _ := v.Origin()
+		line, _ := v.Line(0)
+		if cursorPos+originPos < len(line) {
+			v.MoveCursor(1, 0, false)
+		}
 	case key == gocui.KeyArrowDown:
 		v.MoveCursor(0, 1, false)
 	case key == gocui.KeyArrowDown:
 		v.MoveCursor(0, -1, false)
 	case key == gocui.KeyHome:
-		v.SetCursor(0, 0)
+		v.EditGotoToStartOfLine()
+		// v.SetCursor(0, 0)
+		// v.SetOrigin(0, 0)
 	case key == gocui.KeyEnd:
-		line, _ := v.Line(0)
-		v.SetCursor(len(line), 0)
+		// line, _ := v.Line(0)
+		// width, _ := v.Size()
+		// if len(line) < width {
+		// 	v.SetCursor(len(line), 0)
+		// } else {
+		// 	v.SetCursor(width-1, 0)
+		// 	v.SetOrigin(len(line)-width+1, 0)
+		// }
+		v.EditGotoToEndOfLine()
 	}
 }
 
@@ -95,9 +109,6 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 	} else if key == gocui.KeyCtrlN {
 		e.nodeList.FindNextHighlight()
 	}
-	// else if key == gocui.KeyCtrlR {
-	// 	e.nodeList.Clear()
-	// }
 
 	if cursorPos, y := v.Cursor(); y == 0 {
 		input, _ := v.Line(0)
@@ -152,11 +163,6 @@ func (e *NodesEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modi
 	case key == gocui.KeyArrowLeft:
 		x, y := v.Origin()
 		v.SetOrigin(x-1, y)
-	// case ch == 'e':
-	// 	e.nodeList.ExpandActiveNode()
-	// case ch == 'c':
-	// 	newY := e.nodeList.CollapseActiveNode()
-	// 	v.SetCursor(0, newY)
 	case key == gocui.KeyPgup:
 		e.nodeList.MoveTopNode(-25)
 	case key == gocui.KeyPgdn:
@@ -220,8 +226,8 @@ func (s *SelectPopupEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocu
 		if line, err := v.Line(cursorY); err == nil {
 			s.ch <- line
 		}
-		// case key == gocui.KeyCtrlG:
-		// cui.ClosePopup()
+	case key == gocui.KeyEsc:
+		cui.ClosePopup()
 	}
 }
 
@@ -260,8 +266,8 @@ func (w *WritePopupEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui
 		input, _ := v.Line(1)
 		w.ch <- input
 		return
-		// case key == gocui.KeyCtrlG:
-		// 	cui.ClosePopup()
+	case key == gocui.KeyEsc:
+		cui.ClosePopup()
 	}
 }
 
@@ -291,6 +297,8 @@ func (c *ConfirmPopupEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod goc
 		cui.ClosePopup()
 		c.ch <- "n"
 	case key == gocui.KeyEnter && c.ch == nil:
+		cui.ClosePopup()
+	case key == gocui.KeyEsc:
 		cui.ClosePopup()
 	}
 }

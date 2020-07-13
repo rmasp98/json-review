@@ -83,6 +83,13 @@ func TestParseReturnsErrorIfFunctionsHaveNoOperator(t *testing.T) {
 	}
 }
 
+func TestCanHandleSimilarOperators(t *testing.T) {
+	_, actual := search.Parse("FindNodes(\"test\")-FindNodes(\"test\")->FindNodes(\"test\")")
+	if actual != nil {
+		t.Errorf("Expected no error but got '%s'", actual)
+	}
+}
+
 func TestParseCanHandleSpaces(t *testing.T) {
 	_, actual := search.Parse(" FindNodes( \"test\") +  FindNodes( \"test\" ) ")
 	if actual != nil {
@@ -155,14 +162,14 @@ func TestBasicCommandCorrectlyParsed(t *testing.T) {
 }
 
 func TestComplexCommandCorrectlyParsed(t *testing.T) {
-	actual, _ := search.Parse("((FindNodes(\"test\", Key, output=outnodes)) + FindRelative(outnodes, \"next test\", 2, 5))")
+	actual, _ := search.Parse("((FindNodes(\"test\", Key, output=outnodes)) -> FindRelative(outnodes, \"next test\", 2, 5, KEY, true))")
 	expected := []search.Command{
 		search.NewCommand(search.CMDNULL, nil, "", "", "("),
 		search.NewCommand(search.CMDNULL, nil, "", "", "("),
 		search.NewCommand(search.CMDFINDNODES, map[string]string{"regex": "test", "matchType": "Key"}, "outnodes", "", ")"),
-		search.NewCommand(search.CMDFINDRELATIVE, map[string]string{"nodes": "outnodes", "regex": "next test", "relativeStart": "2", "depth": "5"}, "", "+", ")"),
+		search.NewCommand(search.CMDFINDRELATIVE, map[string]string{"nodes": "outnodes", "regex": "next test", "relativeStart": "2", "depth": "5", "matchType": "KEY", "equal": "true"}, "", "->", ")"),
 	}
-	for index := range actual {
+	for index := range expected {
 		if !reflect.DeepEqual(actual[index], expected[index]) {
 			t.Errorf("Expected \n'%v' but got \n'%v'", expected[index], actual[index])
 		}

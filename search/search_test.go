@@ -1,6 +1,9 @@
 package search_test
 
 import (
+	"io/ioutil"
+	"kube-review/mocks"
+	"kube-review/nodelist"
 	"kube-review/search"
 	"testing"
 )
@@ -71,4 +74,47 @@ func TestGetModeInfoReturnsCorrect(t *testing.T) {
 		}
 		s.ToggleQueryMode()
 	}
+}
+
+func TestResetViewIsCalledBeforeSearch(t *testing.T) {
+	mock := mocks.NodeListMock{}
+	s := search.NewSearch(search.REGEX, getQueryList())
+	s.Execute("test", &mock)
+	if mock.Calls[0] != "ResetView" {
+		t.Errorf("Expected ResetView to be called but it was not")
+	}
+}
+
+func TestExecuteReturnsErrorForInvalidRegex(t *testing.T) {
+	mock := mocks.NodeListMock{}
+	s := search.NewSearch(search.REGEX, getQueryList())
+	actual := s.Execute("*", &mock)
+	if actual == nil {
+		t.Errorf("Expected an error but got none")
+	}
+}
+
+func TestExecuteReturnsErrorForInvalidQuery(t *testing.T) {
+	mock := mocks.NodeListMock{}
+	s := search.NewSearch(search.QUERY, getQueryList())
+	actual := s.Execute("test", &mock)
+	if actual == nil {
+		t.Errorf("Expected an error but got none")
+	}
+}
+
+func TestExecuteReturnsErrorForInvalidExpression(t *testing.T) {
+	mock := mocks.NodeListMock{}
+	s := search.NewSearch(search.EXPRESSION, getQueryList())
+	actual := s.Execute("test", &mock)
+	if actual == nil {
+		t.Errorf("Expected an error but got none")
+	}
+}
+
+func TestSearchExpressionIntegratesWithNodelist(t *testing.T) {
+	jsonRaw, _ := ioutil.ReadFile("../testdata/test.json")
+	nodeList, _ := nodelist.NewNodeList(jsonRaw, true)
+	s := search.NewSearch(search.EXPRESSION, getQueryList())
+	s.Execute("FindNodes(\"Wilma Kidd\", output=test) + FindRelative(test, \"id\", 1, 2, KEY, true)", &nodeList)
 }

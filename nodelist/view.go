@@ -209,7 +209,11 @@ func (v View) getJSON(activeIndex, nodeIndex, level, offset int, num *int) strin
 
 func (v View) getChildrenMatching(nodeIndex int, levels int, searchFunction searchFunctionType) []int {
 	var matchedIndices []int
-	if levels != 0 {
+	if levels == 0 {
+		if searchFunction(v.nodes[nodeIndex].node) {
+			matchedIndices = append(matchedIndices, nodeIndex)
+		}
+	} else {
 		for _, childIndex := range v.nodes[nodeIndex].children {
 			if searchFunction(v.nodes[childIndex].node) {
 				matchedIndices = append(matchedIndices, childIndex)

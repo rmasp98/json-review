@@ -15,6 +15,7 @@ func NewWindow(panelRelativeWidth float64, border, tbBaseBuffer int) Window {
 		DISPLAY: newLayout(1, 1),
 		SEARCH:  newLayout(1, 2),
 		HELP:    newLayout(1, 2),
+		VIEW:    newLayout(10, 1),
 	}, panelRelativeWidth, border, tbBaseBuffer}
 }
 
@@ -38,11 +39,16 @@ func (w *Window) Resize(maxWidth, maxHeight, searchHeight int) error {
 
 	if panelWidth != 0 {
 		w.updateViewDimensions(PANEL,
-			w.border, w.border,
+			w.border, tbBuffer+w.border,
 			panelWidth, maxHeight-tbBuffer-w.border,
+		)
+		w.updateViewDimensions(VIEW,
+			w.border, w.border,
+			panelWidth, tbBuffer,
 		)
 	} else {
 		w.updateViewDimensions(PANEL, 0, 0, 0, 0)
+		w.updateViewDimensions(VIEW, 0, 0, 0, 0)
 	}
 	if tbBuffer != 0 {
 		w.updateViewDimensions(SEARCH,
