@@ -50,9 +50,9 @@ func (s SaveUI) saveProcess() {
 	}
 
 	if err == nil {
-		cui.CreatePopup("Save Successful", saveType+" data has been successfully saved to "+filename, NewConfirmPopupEditor(nil), true, false, true)
+		cui.CreatePopup("Save Successful", saveType+" data has been successfully saved to "+filename, NewConfirmPopupEditor(nil), false, false, true)
 	} else {
-		cui.CreatePopup("Save Failed", err.Error(), NewConfirmPopupEditor(nil), true, false, true)
+		cui.CreatePopup("Save Failed", err.Error(), NewConfirmPopupEditor(nil), false, false, true)
 	}
 }
 
@@ -75,7 +75,7 @@ func getFilename(saveType string) (string, error) {
 	filename := <-ch
 	cui.ClosePopup()
 	if _, err := os.Stat(filename); err == nil {
-		cui.CreatePopup("File Exists", "This file already exists. Do you want to overwrite: (Y/N)", NewConfirmPopupEditor(ch), true, false, true)
+		cui.CreatePopup("File Exists", "This file already exists. Do you want to overwrite: (Y/N)", NewConfirmPopupEditor(ch), false, false, true)
 		overwrite := <-ch
 		cui.ClosePopup()
 		if overwrite == "n" {

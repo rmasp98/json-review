@@ -37,19 +37,17 @@ func basicEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	case key == gocui.KeyArrowDown:
 		v.MoveCursor(0, -1, false)
 	case key == gocui.KeyHome:
-		v.EditGotoToStartOfLine()
-		// v.SetCursor(0, 0)
-		// v.SetOrigin(0, 0)
+		v.SetCursor(0, 0)
+		v.SetOrigin(0, 0)
 	case key == gocui.KeyEnd:
-		// line, _ := v.Line(0)
-		// width, _ := v.Size()
-		// if len(line) < width {
-		// 	v.SetCursor(len(line), 0)
-		// } else {
-		// 	v.SetCursor(width-1, 0)
-		// 	v.SetOrigin(len(line)-width+1, 0)
-		// }
-		v.EditGotoToEndOfLine()
+		line, _ := v.Line(0)
+		width, _ := v.Size()
+		if len(line) < width {
+			v.SetCursor(len(line), 0)
+		} else {
+			v.SetCursor(width-1, 0)
+			v.SetOrigin(len(line)-width+1, 0)
+		}
 	}
 }
 
@@ -71,12 +69,12 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 		e.searchCursorPos, _ = v.Cursor()
 		basicEditor(v, key, ch, mod)
 	} else {
-		switch {
-		case key == gocui.KeyArrowUp:
+		switch key {
+		case gocui.KeyArrowUp:
 			v.MoveCursor(0, -1, false)
-		case key == gocui.KeyArrowDown:
+		case gocui.KeyArrowDown:
 			v.MoveCursor(0, 1, false)
-		case key == gocui.KeyEnter:
+		case gocui.KeyEnter:
 			input, _ := v.Line(0)
 			searchLine, newCursorPos := e.s.InsertSelectedHint(input, e.searchCursorPos, lineNum-1)
 			v.Clear()
@@ -87,7 +85,8 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 		}
 	}
 
-	if key == gocui.KeyEnter {
+	switch key {
+	case gocui.KeyEnter:
 		input, _ := v.Line(0)
 		v.Clear()
 		v.Write([]byte(input))
@@ -96,18 +95,24 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 			return
 		}
 		return
-	} else if key == gocui.KeyCtrlQ {
+	case gocui.KeyCtrlQ:
 		e.s.ToggleQueryMode()
 		clearInput(v)
 		cui.UpdateViewTitle(SEARCH, "Search: Mode="+e.s.GetModeInfo())
 		return
-	} else if key == gocui.KeyCtrlF {
+	case gocui.KeyCtrlF:
 		e.s.ToggleSearchMode()
 		clearInput(v)
 		cui.UpdateViewTitle(SEARCH, "Search: Mode="+e.s.GetModeInfo())
 		return
-	} else if key == gocui.KeyCtrlN {
+	case gocui.KeyCtrlN:
 		e.nodeList.FindNextHighlight()
+	case gocui.KeyEsc:
+		if input, err := v.Line(0); err == nil {
+			v.Clear()
+			v.Write([]byte(input))
+			return
+		}
 	}
 
 	if cursorPos, y := v.Cursor(); y == 0 {

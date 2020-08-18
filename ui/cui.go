@@ -198,8 +198,8 @@ func (cui *CursesUI) CreatePopup(title, content string, editor gocui.Editor, cur
 		view.Title = title
 		view.Editable = editor != nil
 		view.Editor = editor
-		view.Write([]byte(content))
 		view.Highlight = highlight
+		view.Write([]byte(content))
 		if nextLine {
 			view.SetCursor(0, 1)
 		}
