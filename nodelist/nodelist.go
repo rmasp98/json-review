@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/rivo/tview"
 )
 
 // NodeList presents an interface for interacting with nodelists
@@ -50,6 +52,12 @@ func (n NodeList) GetJSON(num int) string {
 // and is only num nodes long
 func (n NodeList) GetNodes(num int) string {
 	return n.currentView.GetNodes(n.topNodeIndex, num)
+}
+
+// GetTViewNodes stuff
+func (n NodeList) GetTViewNodes() *tview.TreeView {
+	nodes := n.currentView.GetTViewNodes()
+	return tview.NewTreeView().SetRoot(nodes).SetCurrentNode(nodes)
 }
 
 // MoveTopNode changes the start position (topNode) of what GetNodes returns

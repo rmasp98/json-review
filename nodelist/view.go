@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/rivo/tview"
 )
 
 var spacing = "    "
@@ -54,6 +56,21 @@ func (v View) GetNodes(start, num int) string {
 		nodes += v.nodes[index].prefix + v.nodes[index].node.GetNode() + "\n"
 	}
 	return strings.TrimRight(nodes, "\n")
+}
+
+//GetTViewNodes stuff
+func (v View) GetTViewNodes() *tview.TreeNode {
+	root := tview.NewTreeNode(v.nodes[0].node.GetNode())
+	v.addChildNodes(root, v.nodes[0].children)
+	return root
+}
+
+func (v View) addChildNodes(node *tview.TreeNode, children []int) {
+	for _, child := range children {
+		childNode := tview.NewTreeNode(v.nodes[child].node.GetNode())
+		v.addChildNodes(childNode, v.nodes[child].children)
+		node.AddChild(childNode)
+	}
 }
 
 // GetJSON returns formated JSON for nodeIndex. The JSON output can be offset and

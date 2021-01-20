@@ -3,47 +3,37 @@ package ui
 import (
 	"kube-review/nodelist"
 	"kube-review/search"
+
+	"github.com/gdamore/tcell"
+
+	"github.com/rivo/tview"
 )
 
-var cui CursesUI
-
-// ViewEnum list the possible views available
-type ViewEnum int
-
-const (
-	// PANEL a
-	PANEL ViewEnum = iota
-	// SEARCH a
-	SEARCH
-	// DISPLAY a
-	DISPLAY
-	// HELP a
-	HELP
-	// VIEW a
-	VIEW
-)
-
-func (ve ViewEnum) String() string {
-	return [...]string{"Panel", "Search", "Display", "Help", "View"}[ve]
-}
-
-// Help stuff
-func (ve ViewEnum) Help() string {
-	return [...]string{
-		" | E: Expand Node | C: Collapse Node",             //PANEL
-		" | Ctrl+Q: Toggle Query Mode | Ctrl+N: Find Next", //SEARCH
-		"", //DISPLAY
-		"Ctrl+C: Exit  | Tab: Next View | Ctrl+R: Reset View | Ctrl+T: Split View | Ctrl+Y: Change View | Ctrl+S: Save ", //HELP
-		"", //VIEW
-	}[ve]
-}
-
-// Run is the entry point for the curses UI interface
+// Run stuff
 func Run(nodeList *nodelist.NodeList, queryList *search.QueryList) error {
-	var err error
-	cui, err = NewCursesUI(nodeList, queryList)
-	if err != nil {
-		return err
-	}
-	return cui.Run()
+	nodes := nodeList.GetTViewNodes()
+	nodes.SetBorder(true).SetTitle("Nodes")
+
+	// TODO: figure out window size
+	json := tview.NewTextView().SetText(nodeList.GetJSON(-1)).SetWrap(false)
+	json.SetBorder(true).SetTitle("Json")
+
+	help := tview.NewTextView().SetText("INSERT HELP TEXT")
+	help.SetBorder(true).SetTitle("Help")
+
+	// Can use set label to define search type
+	search := tview.NewInputField().SetFieldBackgroundColor(tcell.ColorDefault).SetLabel("Regex-Filter: ").SetAutocompleteFunc(func(text string) []string { return []string{"Test1", "Test2"} })
+	search.SetBorder(true).SetTitle("Search")
+
+	flex := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(tview.NewFlex().
+			AddItem(nodes, 0, 1, false).
+			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+				AddItem(search, 4, 1, true).
+				AddItem(json, 0, 1, false),
+				0, 3, true),
+			0, 1, true).
+		AddItem(help, 4, 1, false)
+
+	return tview.NewApplication().SetRoot(flex, true).Run()
 }
