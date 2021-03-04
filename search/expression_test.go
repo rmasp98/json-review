@@ -1,10 +1,11 @@
 package search_test
 
 import (
-	"kube-review/mocks"
-	"kube-review/search"
 	"reflect"
 	"testing"
+
+	"github.com/rmasp98/kube-review/mocks"
+	"github.com/rmasp98/kube-review/search"
 )
 
 func TestBasicCommandExecutesCorrectFunctions(t *testing.T) {

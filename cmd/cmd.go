@@ -3,8 +3,9 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"kube-review/nodelist"
 	"os"
+
+	"github.com/rmasp98/kube-review/nodelist"
 
 	"github.com/spf13/cobra"
 )

@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"kube-review/search"
-	"kube-review/ui"
+
+	"github.com/rmasp98/kube-review/search"
+	"github.com/rmasp98/kube-review/ui"
 
 	"github.com/spf13/cobra"
 )

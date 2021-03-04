@@ -1,11 +1,12 @@
 package search
 
 import (
-	"kube-review/nodelist"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 // ForValues(nodes, searchtype, outnodes)

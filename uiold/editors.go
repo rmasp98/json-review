@@ -1,8 +1,8 @@
 package uiold
 
 import (
-	"kube-review/nodelist"
-	"kube-review/search"
+	"github.com/rmasp98/kube-review/nodelist"
+	"github.com/rmasp98/kube-review/search"
 
 	"github.com/awesome-gocui/gocui"
 )
@@ -24,18 +24,18 @@ func basicEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 			v.EditDelete(false)
 		}
 	case key == gocui.KeyArrowLeft:
-		v.MoveCursor(-1, 0, false)
+		v.MoveCursor(-1, 0)
 	case key == gocui.KeyArrowRight:
 		cursorPos, _ := v.Cursor()
 		originPos, _ := v.Origin()
 		line, _ := v.Line(0)
 		if cursorPos+originPos < len(line) {
-			v.MoveCursor(1, 0, false)
+			v.MoveCursor(1, 0)
 		}
 	case key == gocui.KeyArrowDown:
-		v.MoveCursor(0, 1, false)
+		v.MoveCursor(0, 1)
 	case key == gocui.KeyArrowDown:
-		v.MoveCursor(0, -1, false)
+		v.MoveCursor(0, -1)
 	case key == gocui.KeyHome:
 		v.SetCursor(0, 0)
 		v.SetOrigin(0, 0)
@@ -71,9 +71,9 @@ func (e *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 	} else {
 		switch key {
 		case gocui.KeyArrowUp:
-			v.MoveCursor(0, -1, false)
+			v.MoveCursor(0, -1)
 		case gocui.KeyArrowDown:
-			v.MoveCursor(0, 1, false)
+			v.MoveCursor(0, 1)
 		case gocui.KeyEnter:
 			input, _ := v.Line(0)
 			searchLine, newCursorPos := e.s.InsertSelectedHint(input, e.searchCursorPos, lineNum-1)
@@ -147,14 +147,14 @@ func (e *NodesEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modi
 	switch {
 	case key == gocui.KeyArrowUp:
 		_, oldY := v.Cursor()
-		v.MoveCursor(0, -1, false)
+		v.MoveCursor(0, -1)
 		_, newY := v.Cursor()
 		if oldY == newY {
 			e.nodeList.MoveTopNode(-1)
 		}
 		e.nodeList.SetActiveNode(newY)
 	case key == gocui.KeyArrowDown:
-		v.MoveCursor(0, 1, false)
+		v.MoveCursor(0, 1)
 		if _, yOrigin := v.Origin(); yOrigin > 0 {
 			e.nodeList.MoveTopNode(1)
 			v.SetOrigin(0, 0)
@@ -222,10 +222,10 @@ func (s *SelectPopupEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocu
 		_, cursorY := v.Cursor()
 		_, originY := v.Origin()
 		if !(originY == 0 && cursorY == 1) {
-			v.MoveCursor(0, -1, false)
+			v.MoveCursor(0, -1)
 		}
 	case key == gocui.KeyArrowDown:
-		v.MoveCursor(0, 1, false)
+		v.MoveCursor(0, 1)
 	case key == gocui.KeyEnter:
 		_, cursorY := v.Cursor()
 		if line, err := v.Line(cursorY); err == nil {
@@ -263,10 +263,10 @@ func (w *WritePopupEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui
 		}
 	case key == gocui.KeyArrowLeft:
 		if !atLineBeginning(v) {
-			v.MoveCursor(-1, 0, false)
+			v.MoveCursor(-1, 0)
 		}
 	case key == gocui.KeyArrowRight:
-		v.MoveCursor(1, 0, false)
+		v.MoveCursor(1, 0)
 	case key == gocui.KeyEnter:
 		input, _ := v.Line(1)
 		w.ch <- input

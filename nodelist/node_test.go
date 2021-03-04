@@ -1,9 +1,10 @@
 package nodelist_test
 
 import (
-	"kube-review/nodelist"
 	"regexp"
 	"testing"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 func TestCorrectFormatReturnedForGetJSON(t *testing.T) {

@@ -1,9 +1,10 @@
 package nodelist_test
 
 import (
-	"kube-review/nodelist"
 	"reflect"
 	"testing"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 // Tests

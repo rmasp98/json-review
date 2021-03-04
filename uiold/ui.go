@@ -1,8 +1,8 @@
 package uiold
 
 import (
-	"kube-review/nodelist"
-	"kube-review/search"
+	"github.com/rmasp98/kube-review/nodelist"
+	"github.com/rmasp98/kube-review/search"
 )
 
 var cui CursesUI

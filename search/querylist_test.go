@@ -1,9 +1,10 @@
 package search_test
 
 import (
-	"kube-review/search"
 	"reflect"
 	"testing"
+
+	"github.com/rmasp98/kube-review/search"
 )
 
 func TestReturnsAnErrorIfFailedToLoadFile(t *testing.T) {

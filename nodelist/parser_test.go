@@ -2,8 +2,9 @@ package nodelist_test
 
 import (
 	"fmt"
-	"kube-review/nodelist"
 	"testing"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 func TestCanParseJSONString(t *testing.T) {

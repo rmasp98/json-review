@@ -1,12 +1,12 @@
 package ui
 
 import (
-	"kube-review/nodelist"
-	"kube-review/search"
+	"github.com/rmasp98/kube-review/nodelist"
+	"github.com/rmasp98/kube-review/search"
 
 	"github.com/gdamore/tcell"
 
-	"kube-review/tview"
+	"github.com/rmasp98/kube-review/tview"
 )
 
 // Run stuff

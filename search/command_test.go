@@ -1,12 +1,13 @@
 package search_test
 
 import (
-	"kube-review/mocks"
-	"kube-review/nodelist"
-	"kube-review/search"
 	"reflect"
 	"regexp"
 	"testing"
+
+	"github.com/rmasp98/kube-review/mocks"
+	"github.com/rmasp98/kube-review/nodelist"
+	"github.com/rmasp98/kube-review/search"
 )
 
 func TestReturnsTrueIfHasOpenBracket(t *testing.T) {

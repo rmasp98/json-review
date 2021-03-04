@@ -2,8 +2,9 @@ package search
 
 import (
 	"fmt"
-	"kube-review/nodelist"
 	"regexp"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 // Search stuff

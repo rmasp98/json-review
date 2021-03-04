@@ -2,10 +2,11 @@ package nodelist_test
 
 import (
 	"encoding/json"
-	"kube-review/nodelist"
 	"reflect"
 	"regexp"
 	"testing"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 func TestReturnsErrorIfNotRootNode(t *testing.T) {

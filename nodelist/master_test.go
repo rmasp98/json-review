@@ -1,8 +1,9 @@
 package nodelist_test
 
 import (
-	"kube-review/nodelist"
 	"testing"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 func TestReturnsErrorIfDataNotYetParsed(t *testing.T) {

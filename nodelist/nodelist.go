@@ -2,12 +2,13 @@ package nodelist
 
 import (
 	"fmt"
-	"kube-review/utils"
 	"regexp"
 	"sort"
 	"strings"
 
-	"kube-review/tview"
+	"github.com/rmasp98/kube-review/utils"
+
+	"github.com/rmasp98/kube-review/tview"
 )
 
 // NodeList presents an interface for interacting with nodelists

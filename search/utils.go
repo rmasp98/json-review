@@ -1,9 +1,10 @@
 package search
 
 import (
-	"kube-review/nodelist"
 	"regexp"
 	"strings"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 // FunctionEnum list the possible views available

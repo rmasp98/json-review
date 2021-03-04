@@ -2,10 +2,11 @@ package uiold
 
 import (
 	"fmt"
-	"kube-review/nodelist"
-	"kube-review/search"
 	"log"
 	"os"
+
+	"github.com/rmasp98/kube-review/nodelist"
+	"github.com/rmasp98/kube-review/search"
 
 	"github.com/awesome-gocui/gocui"
 )

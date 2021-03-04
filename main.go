@@ -1,9 +1,10 @@
 package main
 
 import (
-	"kube-review/cmd"
 	"log"
 	"os"
+
+	"github.com/rmasp98/kube-review/cmd"
 )
 
 func main() {

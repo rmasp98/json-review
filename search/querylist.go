@@ -2,10 +2,11 @@ package search
 
 import (
 	"fmt"
-	"kube-review/utils"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/rmasp98/kube-review/utils"
 )
 
 // QueryList allow viewing, editing and saving of the list of Common Misconfigurations

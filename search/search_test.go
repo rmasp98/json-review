@@ -2,10 +2,11 @@ package search_test
 
 import (
 	"io/ioutil"
-	"kube-review/mocks"
-	"kube-review/nodelist"
-	"kube-review/search"
 	"testing"
+
+	"github.com/rmasp98/kube-review/mocks"
+	"github.com/rmasp98/kube-review/nodelist"
+	"github.com/rmasp98/kube-review/search"
 )
 
 func getQueryList() *search.QueryList {

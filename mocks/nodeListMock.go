@@ -1,8 +1,9 @@
 package mocks
 
 import (
-	"kube-review/nodelist"
 	"regexp"
+
+	"github.com/rmasp98/kube-review/nodelist"
 )
 
 // NodeListMock creates a mock for NodeList
