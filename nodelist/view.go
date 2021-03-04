@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/rivo/tview"
+	"kube-review/tview"
 )
 
 var spacing = "    "

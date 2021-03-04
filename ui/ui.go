@@ -6,12 +6,14 @@ import (
 
 	"github.com/gdamore/tcell"
 
-	"github.com/rivo/tview"
+	"kube-review/tview"
 )
 
 // Run stuff
 func Run(nodeList *nodelist.NodeList, queryList *search.QueryList) error {
-	nodes := nodeList.GetTViewNodes()
+
+	nodes := tview.NewTextView()
+	nodes.SetText(nodeList.GetNodes(50)).SetWrap(false)
 	nodes.SetBorder(true).SetTitle("Nodes")
 
 	// TODO: figure out window size
@@ -21,19 +23,27 @@ func Run(nodeList *nodelist.NodeList, queryList *search.QueryList) error {
 	help := tview.NewTextView().SetText("INSERT HELP TEXT")
 	help.SetBorder(true).SetTitle("Help")
 
+	searchThing := search.NewSearch(search.EXPRESSION, queryList)
+
 	// Can use set label to define search type
-	search := tview.NewInputField().SetFieldBackgroundColor(tcell.ColorDefault).SetLabel("Regex-Filter: ").SetAutocompleteFunc(func(text string) []string { return []string{"Test1", "Test2"} })
+	search := tview.NewInputField().SetFieldBackgroundColor(tcell.ColorDefault).SetLabel("Regex-Filter: ").SetAutocompleteFunc(searchThing.GetHints2)
 	search.SetBorder(true).SetTitle("Search")
+	search.SetAutocompleteInsertFunc(func(autoCompleteText string, currentText string, cursorPos int, key tcell.Key) string {
+		if key == tcell.KeyEnter {
+			return autoCompleteText
+		}
+		return currentText
+	})
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(tview.NewFlex().
 			AddItem(nodes, 0, 1, false).
 			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-				AddItem(search, 4, 1, true).
+				AddItem(search, 3, 1, true).
 				AddItem(json, 0, 1, false),
 				0, 3, true),
 			0, 1, true).
-		AddItem(help, 4, 1, false)
+		AddItem(help, 3, 1, false)
 
 	return tview.NewApplication().SetRoot(flex, true).Run()
 }

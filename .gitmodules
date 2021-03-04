@@ -1,0 +1,3 @@
+[submodule "tview"]
+	path = tview
+	url = https://github.com/rmasp98/tview

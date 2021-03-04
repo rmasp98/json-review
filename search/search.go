@@ -27,6 +27,14 @@ func (s Search) GetHints(input string, cursorPos int) string {
 	return output
 }
 
+// GetHints2 stuff
+func (s Search) GetHints2(input string) []string {
+	if input == "" {
+		return []string{}
+	}
+	return s.getPossibleHints(input, len(input))
+}
+
 // InsertSelectedHint returns the search string with hint inserted and the position
 // of the end of inserted hint
 func (s Search) InsertSelectedHint(input string, cursorPos int, index int) (string, int) {

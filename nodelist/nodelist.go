@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/rivo/tview"
+	"kube-review/tview"
 )
 
 // NodeList presents an interface for interacting with nodelists
